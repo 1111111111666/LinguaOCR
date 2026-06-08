@@ -6,18 +6,31 @@
     <title>LinguaOCR - Преврати конспекты в карточки</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             background: #ffffff;
             color: #1a1a1a;
             line-height: 1.5;
         }
+
+        /* Уведомление */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: #1a1a1a;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 48px;
+            font-size: 14px;
+            font-weight: 500;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+        .toast.show { opacity: 1; }
 
         /* Навигация */
         .navbar {
@@ -29,7 +42,6 @@
             padding: 0 32px;
             z-index: 100;
         }
-
         .nav-container {
             max-width: 1400px;
             margin: 0 auto;
@@ -37,8 +49,9 @@
             justify-content: space-between;
             align-items: center;
             height: 64px;
+            flex-wrap: wrap;
+            gap: 16px;
         }
-
         .logo {
             font-size: 20px;
             font-weight: 700;
@@ -47,25 +60,15 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
-
-        .nav-links {
-            display: flex;
-            gap: 32px;
-        }
-
+        .nav-links { display: flex; gap: 24px; flex-wrap: wrap; }
         .nav-links a {
             text-decoration: none;
             color: #4a4a4a;
             font-size: 14px;
             font-weight: 500;
-            transition: color 0.2s;
             cursor: pointer;
         }
-
-        .nav-links a:hover {
-            color: #1a1a1a;
-        }
-
+        .nav-links a:hover { color: #1a1a1a; }
         .language-selector {
             display: flex;
             gap: 8px;
@@ -73,7 +76,6 @@
             padding: 6px;
             border-radius: 40px;
         }
-
         .lang-btn {
             padding: 6px 16px;
             border-radius: 32px;
@@ -84,44 +86,23 @@
             font-weight: 500;
             transition: all 0.2s;
         }
-
-        .lang-btn.active {
-            background: #1a1a1a;
-            color: white;
-        }
+        .lang-btn.active { background: #1a1a1a; color: white; }
 
         /* Основной контент */
-        .main {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 48px 32px;
-            min-height: calc(100vh - 200px);
-        }
-
-        /* Hero секция */
-        .hero {
-            text-align: center;
-            max-width: 800px;
-            margin: 0 auto 64px;
-        }
-
+        .main { max-width: 1400px; margin: 0 auto; padding: 48px 32px; min-height: calc(100vh - 200px); }
+        .hero { text-align: center; max-width: 800px; margin: 0 auto 48px; }
         .hero h1 {
-            font-size: 56px;
+            font-size: 48px;
             font-weight: 700;
             letter-spacing: -0.02em;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
             background: linear-gradient(135deg, #1a1a1a 0%, #666666 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
+        .hero p { font-size: 18px; color: #666; }
 
-        .hero p {
-            font-size: 18px;
-            color: #666;
-            line-height: 1.6;
-        }
-
-        /* Зона загрузки */
+        /* Зона загрузки - теперь здесь же показывается превью */
         .upload-zone {
             background: #fafafa;
             border: 2px dashed #e0e0e0;
@@ -130,96 +111,89 @@
             text-align: center;
             transition: all 0.2s;
             cursor: pointer;
-            margin-bottom: 48px;
+            margin-bottom: 32px;
+            position: relative;
         }
-
-        .upload-zone:hover {
-            border-color: #1a1a1a;
-            background: #f5f5f5;
+        .upload-zone.with-preview {
+            padding: 0;
+            overflow: hidden;
+            cursor: default;
         }
-
-        .upload-zone.drag-over {
-            border-color: #1a1a1a;
-            background: #f0f0f0;
+        .upload-zone.with-preview .upload-content {
+            display: none;
         }
-
-        .upload-icon {
-            font-size: 48px;
-            margin-bottom: 16px;
+        .upload-zone.with-preview .preview-container {
+            display: block;
         }
-
-        .upload-title {
-            font-size: 20px;
-            font-weight: 600;
-            margin-bottom: 8px;
-        }
-
-        .upload-subtitle {
-            color: #888;
+        .upload-zone:hover { border-color: #1a1a1a; background: #f5f5f5; }
+        .upload-zone.drag-over { border-color: #1a1a1a; background: #f0f0f0; }
+        .upload-icon { font-size: 48px; margin-bottom: 16px; }
+        .upload-title { font-size: 20px; font-weight: 600; margin-bottom: 8px; }
+        .upload-subtitle { color: #888; font-size: 14px; }
+        .clipboard-btn {
+            margin-top: 16px;
+            padding: 10px 24px;
+            background: transparent;
+            border: 1px solid #e0e0e0;
+            border-radius: 40px;
+            cursor: pointer;
             font-size: 14px;
         }
-
-        .file-input {
+        .clipboard-btn:hover { border-color: #1a1a1a; background: #1a1a1a; color: white; }
+        .file-input { display: none; }
+        
+        .preview-container {
             display: none;
+            position: relative;
         }
-
-        .paste-hint {
-            margin-top: 16px;
-            font-size: 12px;
-            color: #aaa;
+        .preview-container img {
+            width: 100%;
+            max-height: 400px;
+            object-fit: contain;
+            background: #fafafa;
         }
+        .remove-preview-btn {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: rgba(0,0,0,0.6);
+            color: white;
+            border: none;
+            border-radius: 30px;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-size: 14px;
+            backdrop-filter: blur(4px);
+        }
+        .remove-preview-btn:hover { background: rgba(0,0,0,0.8); }
 
         /* Результаты */
-        .results-section {
-            margin-top: 48px;
-            display: none;
-        }
-
+        .results-section { margin-top: 32px; display: none; }
         .results-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 24px;
-            padding-bottom: 16px;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
             border-bottom: 1px solid #eaeaea;
         }
-
-        .results-title {
-            font-size: 18px;
-            font-weight: 600;
-        }
-
+        .results-title { font-size: 18px; font-weight: 600; }
+        .results-stats { font-size: 13px; color: #888; }
         .words-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
             gap: 16px;
         }
-
         .word-card {
             background: #fafafa;
             border-radius: 12px;
             padding: 20px;
             text-align: center;
             transition: all 0.2s;
-            cursor: pointer;
         }
-
-        .word-card:hover {
-            background: #f0f0f0;
-            transform: translateY(-2px);
-        }
-
-        .word-text {
-            font-size: 28px;
-            font-weight: 500;
-            margin-bottom: 8px;
-        }
-
-        .word-translation {
-            font-size: 13px;
-            color: #888;
-        }
-
+        .word-card:hover { background: #f0f0f0; transform: translateY(-2px); }
+        .word-text { font-size: 28px; font-weight: 500; margin-bottom: 8px; }
+        .word-translation { font-size: 13px; color: #888; }
         .add-btn {
             margin-top: 12px;
             padding: 6px 16px;
@@ -230,50 +204,60 @@
             cursor: pointer;
             transition: all 0.2s;
         }
-
-        .add-btn:hover {
-            background: #1a1a1a;
+        .add-btn.added {
+            background: #48bb78;
+            border-color: #48bb78;
             color: white;
         }
+        .add-btn:hover { background: #1a1a1a; color: white; }
 
         /* Вкладки */
-        .tabs {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 32px;
-            border-bottom: 1px solid #eaeaea;
-            padding-bottom: 12px;
-        }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
 
-        .tab {
-            padding: 8px 20px;
+        /* Ручной ввод */
+        .manual-section { max-width: 600px; margin: 0 auto; }
+        .manual-input-group { display: flex; gap: 12px; margin-bottom: 32px; }
+        .manual-input-group input {
+            flex: 1;
+            padding: 14px 18px;
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 16px;
+        }
+        .manual-input-group input:focus { outline: none; border-color: #1a1a1a; }
+        .manual-add-btn {
+            padding: 14px 28px;
+            background: #1a1a1a;
+            color: white;
             border: none;
-            background: transparent;
+            border-radius: 12px;
             cursor: pointer;
-            font-size: 14px;
-            font-weight: 500;
-            color: #888;
-            transition: all 0.2s;
         }
-
-        .tab.active {
-            color: #1a1a1a;
-            border-bottom: 2px solid #1a1a1a;
-        }
-
-        /* Колода */
-        .deck-header {
+        .added-words-section { border-top: 1px solid #eaeaea; padding-top: 24px; }
+        .added-words-title { font-size: 14px; font-weight: 600; margin-bottom: 16px; color: #666; }
+        .added-words-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+        .added-word-card {
+            background: #f5f5f5;
+            border-radius: 8px;
+            padding: 12px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 24px;
         }
-
-        .deck-stats {
-            font-size: 14px;
-            color: #888;
+        .remove-added-word {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            color: #ccc;
+            font-size: 16px;
+            padding: 4px 8px;
         }
+        .remove-added-word:hover { color: #ff4444; }
 
+        /* Колода */
+        .deck-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px; }
+        .deck-stats { font-size: 14px; color: #888; }
         .clear-btn {
             padding: 8px 16px;
             background: transparent;
@@ -281,43 +265,18 @@
             border-radius: 8px;
             cursor: pointer;
             font-size: 13px;
-            transition: all 0.2s;
         }
-
-        .clear-btn:hover {
-            border-color: #ff4444;
-            color: #ff4444;
-        }
-
-        .deck-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-            gap: 12px;
-        }
-
+        .clear-btn:hover { border-color: #ff4444; color: #ff4444; }
+        .deck-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
         .deck-item {
             background: #fafafa;
             border-radius: 10px;
             padding: 16px;
             position: relative;
-            transition: all 0.2s;
         }
-
-        .deck-item:hover {
-            background: #f0f0f0;
-        }
-
-        .deck-word {
-            font-size: 24px;
-            font-weight: 500;
-            margin-bottom: 6px;
-        }
-
-        .deck-translation {
-            font-size: 12px;
-            color: #888;
-        }
-
+        .deck-item:hover { background: #f0f0f0; }
+        .deck-word { font-size: 20px; font-weight: 500; margin-bottom: 6px; }
+        .deck-translation { font-size: 12px; color: #888; }
         .delete-word {
             position: absolute;
             top: 8px;
@@ -325,163 +284,71 @@
             background: transparent;
             border: none;
             cursor: pointer;
-            font-size: 14px;
             color: #ccc;
-            padding: 4px 8px;
         }
-
-        .delete-word:hover {
-            color: #ff4444;
-        }
-
+        .delete-word:hover { color: #ff4444; }
         .empty-deck {
             text-align: center;
-            padding: 80px 20px;
+            padding: 60px;
             color: #aaa;
             background: #fafafa;
             border-radius: 16px;
+            width: 100%;
             grid-column: 1 / -1;
         }
 
-        /* Ручной ввод */
-        .manual-input {
-            display: flex;
-            gap: 12px;
-            margin-bottom: 32px;
-        }
-
-        .manual-input input {
-            flex: 1;
-            padding: 14px 18px;
-            border: 1px solid #e0e0e0;
-            border-radius: 12px;
-            font-size: 16px;
-            font-family: inherit;
-        }
-
-        .manual-input input:focus {
-            outline: none;
-            border-color: #1a1a1a;
-        }
-
-        .added-cards {
-            margin-top: 32px;
-        }
-
-        .added-cards h4 {
-            font-size: 14px;
-            font-weight: 600;
-            margin-bottom: 16px;
-            color: #666;
-        }
-
-        .added-cards-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-            gap: 12px;
-        }
-
-        .added-card-item {
-            background: #f0f0f0;
-            border-radius: 8px;
-            padding: 12px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .added-card-word {
-            font-size: 16px;
-            font-weight: 500;
-        }
-
-        .added-card-undo {
-            background: transparent;
-            border: none;
-            cursor: pointer;
-            font-size: 14px;
-            color: #aaa;
-            padding: 4px 8px;
-        }
-
-        .added-card-undo:hover {
-            color: #ff4444;
-        }
-
-        /* Карточка повторения */
-        .review-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 400px;
-        }
-
+        /* Повторение */
+        .review-container { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 400px; }
         .start-review-btn {
             padding: 16px 48px;
-            background: #1a1a1a;
+            background: linear-gradient(135deg, #1a1a1a 0%, #404040 100%);
             color: white;
             border: none;
             border-radius: 48px;
             cursor: pointer;
             font-size: 18px;
-            font-weight: 500;
-            transition: all 0.2s;
+            font-weight: 600;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
-
         .start-review-btn:hover {
-            background: #333;
             transform: scale(1.02);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+            background: linear-gradient(135deg, #333 0%, #555 100%);
         }
-
         .review-card {
             background: #fafafa;
             border-radius: 32px;
             padding: 60px;
             text-align: center;
             cursor: pointer;
-            max-width: 600px;
+            max-width: 500px;
             margin: 0 auto;
         }
+        .review-word { font-size: 64px; font-weight: 600; margin-bottom: 32px; }
+        .review-translation { font-size: 24px; color: #888; margin-top: 32px; display: none; }
+        .review-buttons { display: flex; gap: 16px; justify-content: center; margin-top: 48px; }
+        .review-btn { padding: 12px 32px; border-radius: 40px; border: none; cursor: pointer; font-size: 14px; font-weight: 500; }
+        .again-btn { background: #f5f5f5; color: #666; }
+        .good-btn { background: #1a1a1a; color: white; }
+        .no-cards-msg { text-align: center; padding: 60px; color: #aaa; }
 
-        .review-word {
-            font-size: 64px;
-            font-weight: 600;
-            margin-bottom: 32px;
+        /* Импорт */
+        .import-section textarea {
+            width: 100%;
+            padding: 16px;
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            font-family: monospace;
+            margin-bottom: 16px;
+            resize: vertical;
         }
+        .import-btn { padding: 12px 24px; background: #1a1a1a; color: white; border: none; border-radius: 10px; cursor: pointer; }
 
-        .review-translation {
-            font-size: 24px;
-            color: #888;
-            margin-top: 32px;
-            display: none;
-        }
-
-        .review-buttons {
-            display: flex;
-            gap: 16px;
-            justify-content: center;
-            margin-top: 48px;
-        }
-
-        .review-btn {
-            padding: 12px 32px;
-            border-radius: 40px;
-            border: none;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 500;
-        }
-
-        .again-btn {
-            background: #f5f5f5;
-            color: #666;
-        }
-
-        .good-btn {
-            background: #1a1a1a;
-            color: white;
-        }
+        /* Q&A */
+        .qa-grid { display: grid; gap: 24px; max-width: 800px; margin: 0 auto; }
+        .qa-item h4 { font-weight: 600; margin-bottom: 8px; }
+        .qa-item p { color: #666; }
 
         /* Футер */
         .footer {
@@ -489,7 +356,6 @@
             padding: 48px 32px 32px;
             background: #fafafa;
         }
-
         .footer-content {
             max-width: 1400px;
             margin: 0 auto;
@@ -497,89 +363,24 @@
             grid-template-columns: 2fr 1fr 1fr 1fr;
             gap: 48px;
         }
-
-        .footer-section h4 {
-            font-size: 14px;
-            font-weight: 600;
-            margin-bottom: 16px;
-        }
-
-        .footer-section p, .footer-section a {
-            font-size: 13px;
-            color: #888;
-            text-decoration: none;
-            line-height: 1.8;
-        }
-
-        .footer-section a:hover {
-            color: #1a1a1a;
-        }
-
-        .copyright {
-            text-align: center;
-            padding-top: 48px;
-            font-size: 12px;
-            color: #aaa;
-        }
-
-        .loading {
-            text-align: center;
-            padding: 60px;
-            color: #888;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-
-        .loading-spinner {
-            display: inline-block;
-            width: 24px;
-            height: 24px;
-            border: 2px solid #e0e0e0;
-            border-top-color: #1a1a1a;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            margin-right: 8px;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
+        .footer-section h4 { font-size: 14px; font-weight: 600; margin-bottom: 16px; }
+        .footer-section p, .footer-section a { font-size: 13px; color: #888; text-decoration: none; line-height: 1.8; cursor: pointer; }
+        .footer-section a:hover { color: #1a1a1a; }
+        .copyright { text-align: center; padding-top: 48px; font-size: 12px; color: #aaa; }
 
         @media (max-width: 768px) {
-            .nav-container {
-                flex-direction: column;
-                height: auto;
-                padding: 16px 0;
-                gap: 16px;
-            }
-            
-            .hero h1 {
-                font-size: 36px;
-            }
-            
-            .upload-zone {
-                padding: 32px;
-            }
-            
-            .footer-content {
-                grid-template-columns: 1fr;
-                gap: 24px;
-            }
-            
-            .review-word {
-                font-size: 40px;
-            }
-            
-            .review-card {
-                padding: 30px;
-            }
+            .nav-container { flex-direction: column; height: auto; padding: 16px 0; }
+            .hero h1 { font-size: 32px; }
+            .upload-zone { padding: 32px; }
+            .footer-content { grid-template-columns: 1fr; gap: 24px; }
+            .review-word { font-size: 40px; }
+            .review-card { padding: 32px; }
         }
     </style>
 </head>
 <body>
+    <div class="toast" id="toast"></div>
+
     <nav class="navbar">
         <div class="nav-container">
             <div class="logo">LinguaOCR</div>
@@ -592,8 +393,8 @@
                 <a onclick="showTab('qa')">Q&A</a>
             </div>
             <div class="language-selector" id="languageSelector">
-                <button class="lang-btn active" data-lang="chinese">🇨🇳 中文</button>
-                <button class="lang-btn" data-lang="english">🇬🇧 English</button>
+                <button class="lang-btn active" data-lang="chinese">🇨🇳 Китайский</button>
+                <button class="lang-btn" data-lang="english">🇬🇧 Английский</button>
                 <button class="lang-btn" data-lang="russian">🇷🇺 Русский</button>
             </div>
         </div>
@@ -606,18 +407,23 @@
         </div>
 
         <!-- Вкладка OCR -->
-        <div id="upload-tab" class="tab-content">
+        <div id="upload-tab" class="tab-content active">
             <div class="upload-zone" id="dropZone">
-                <div class="upload-icon">📸</div>
-                <div class="upload-title">Загрузите фото конспекта</div>
-                <div class="upload-subtitle">Перетащите файл или нажмите для выбора</div>
-                <input type="file" id="fileInput" class="file-input" accept="image/*">
-                <div class="paste-hint">💡 Или нажмите Ctrl+V, чтобы вставить из буфера обмена</div>
+                <div class="upload-content">
+                    <div class="upload-icon">📸</div>
+                    <div class="upload-title">Загрузите фото конспекта</div>
+                    <div class="upload-subtitle">Перетащите файл или нажмите для выбора</div>
+                    <input type="file" id="fileInput" class="file-input" accept="image/*">
+                    <button class="clipboard-btn" id="clipboardBtn">📋 Вставить из буфера обмена</button>
+                </div>
+                <div class="preview-container" id="previewContainer">
+                    <img id="previewImg" alt="Превью">
+                    <button class="remove-preview-btn" onclick="clearPreview()">✖ Удалить</button>
+                </div>
             </div>
-
             <div id="resultsSection" class="results-section">
                 <div class="results-header">
-                    <span class="results-title" id="resultsTitle">Распознанные слова</span>
+                    <span class="results-title" id="resultsTitle">Иероглифы</span>
                     <span class="results-stats" id="resultsStats"></span>
                 </div>
                 <div id="wordsGrid" class="words-grid"></div>
@@ -625,21 +431,21 @@
         </div>
 
         <!-- Вкладка ручного ввода -->
-        <div id="manual-tab" class="tab-content" style="display: none;">
-            <div class="manual-input">
-                <input type="text" id="manualWord" placeholder="Введите слово..." autocomplete="off">
-                <button id="addManualBtn" style="padding: 14px 24px; background: #1a1a1a; color: white; border: none; border-radius: 12px; cursor: pointer;">➕ Добавить</button>
-            </div>
-            <div id="manualPreview" style="font-size: 13px; color: #888; margin-top: -16px; margin-bottom: 24px;"></div>
-            
-            <div id="addedCardsSection" class="added-cards" style="display: none;">
-                <h4>📦 Добавленные карточки</h4>
-                <div id="addedCardsGrid" class="added-cards-grid"></div>
+        <div id="manual-tab" class="tab-content">
+            <div class="manual-section">
+                <div class="manual-input-group">
+                    <input type="text" id="manualWord" placeholder="Введите иероглиф или предложение..." autocomplete="off">
+                    <button class="manual-add-btn" onclick="addManualWord()">➕ Добавить</button>
+                </div>
+                <div class="added-words-section" id="addedWordsSection" style="display: none;">
+                    <div class="added-words-title">📝 Только что добавленные</div>
+                    <div id="addedWordsGrid" class="added-words-grid"></div>
+                </div>
             </div>
         </div>
 
         <!-- Вкладка колоды -->
-        <div id="deck-tab" class="tab-content" style="display: none;">
+        <div id="deck-tab" class="tab-content">
             <div class="deck-header">
                 <div class="deck-stats" id="deckStats">0 слов</div>
                 <button class="clear-btn" onclick="clearDeck()">Очистить всё</button>
@@ -648,9 +454,9 @@
         </div>
 
         <!-- Вкладка повторения -->
-        <div id="review-tab" class="tab-content" style="display: none;">
+        <div id="review-tab" class="tab-content">
             <div id="reviewContainer" class="review-container">
-                <button id="startReviewBtn" class="start-review-btn">🎴 Начать повторение</button>
+                <button class="start-review-btn" onclick="startReview()">🎴 Начать повторение</button>
             </div>
             <div id="reviewCard" class="review-card" style="display: none;">
                 <div class="review-word" id="reviewWord"></div>
@@ -660,112 +466,93 @@
                     <button class="review-btn good-btn" onclick="nextCard('good')">👍 Знаю</button>
                 </div>
             </div>
-            <div id="noCardsMsg" style="text-align: center; padding: 60px; color: #888; display: none;">
-                📭 Нет слов. Добавьте слова через OCR или ручной ввод
-            </div>
+            <div id="noCardsMsg" class="no-cards-msg" style="display: none;">📭 Нет слов. Добавьте слова через OCR или ручной ввод</div>
         </div>
 
         <!-- Вкладка импорта -->
-        <div id="import-tab" class="tab-content" style="display: none;">
-            <h3 style="margin-bottom: 20px; font-weight: 600;">Импорт из Anki</h3>
-            <p style="color: #888; margin-bottom: 16px;">Формат: слово;перевод (каждая строка)</p>
-            <textarea id="importText" rows="6" style="width: 100%; padding: 16px; border: 1px solid #e0e0e0; border-radius: 12px; font-family: monospace; margin-bottom: 16px;" placeholder="你;ni3&#10;好;hao3&#10;谢谢;xie4xie"></textarea>
-            <button onclick="importAnki()" style="padding: 12px 24px; background: #1a1a1a; color: white; border: none; border-radius: 10px; cursor: pointer;">📥 Импортировать</button>
+        <div id="import-tab" class="tab-content">
+            <div class="import-section">
+                <textarea id="importText" rows="6" placeholder="你;ni3&#10;好;hao3&#10;谢谢;xie4xie"></textarea>
+                <button class="import-btn" onclick="importAnki()">📥 Импортировать</button>
+            </div>
         </div>
 
         <!-- Вкладка Q&A -->
-        <div id="qa-tab" class="tab-content" style="display: none;">
-            <h3 style="margin-bottom: 20px; font-weight: 600;">Часто задаваемые вопросы</h3>
-            <div style="display: grid; gap: 24px;">
-                <div>
-                    <h4 style="font-weight: 600; margin-bottom: 8px;">Как это работает?</h4>
-                    <p style="color: #666;">Вы загружаете фото конспекта, AI распознает слова и создает карточки для запоминания.</p>
-                </div>
-                <div>
-                    <h4 style="font-weight: 600; margin-bottom: 8px;">Какие языки поддерживаются?</h4>
-                    <p style="color: #666;">Китайский, английский и русский. Другие языки будут добавлены позже.</p>
-                </div>
-                <div>
-                    <h4 style="font-weight: 600; margin-bottom: 8px;">Мои данные в безопасности?</h4>
-                    <p style="color: #666;">Да, всё распознавание происходит локально на вашем компьютере через Ollama.</p>
-                </div>
-                <div>
-                    <h4 style="font-weight: 600; margin-bottom: 8px;">Почему не работает распознавание?</h4>
-                    <p style="color: #666;">Убедитесь, что Ollama запущен (`ollama serve`) и установлена мультимодальная модель (`ollama pull llava:7b`).</p>
-                </div>
+        <div id="qa-tab" class="tab-content">
+            <div class="qa-grid">
+                <div class="qa-item"><h4>Как это работает?</h4><p>Вы загружаете фото конспекта, AI распознает слова и создает карточки для запоминания.</p></div>
+                <div class="qa-item"><h4>Какие языки поддерживаются?</h4><p>Китайский, английский и русский.</p></div>
+                <div class="qa-item"><h4>Как вставить фото из буфера обмена?</h4><p>Скопируйте изображение (Ctrl+C), затем нажмите кнопку "Вставить из буфера обмена".</p></div>
             </div>
         </div>
     </main>
 
     <footer class="footer">
         <div class="footer-content">
-            <div class="footer-section">
-                <h4>LinguaOCR</h4>
-                <p>Превратите свои конспекты в эффективные карточки для изучения языков</p>
-            </div>
-            <div class="footer-section">
-                <h4>Продукт</h4>
-                <p><a href="#">Возможности</a></p>
-                <p><a href="#">Цены</a></p>
-                <p><a href="#">API</a></p>
-            </div>
-            <div class="footer-section">
-                <h4>Поддержка</h4>
-                <p><a href="#">Контакты</a></p>
-                <p><a href="#">Telegram</a></p>
-                <p><a href="#">GitHub</a></p>
-            </div>
-            <div class="footer-section">
-                <h4>Правовая информация</h4>
-                <p><a href="#">Политика конфиденциальности</a></p>
-                <p><a href="#">Условия использования</a></p>
-            </div>
+            <div class="footer-section"><h4>LinguaOCR</h4><p>Превратите свои конспекты в эффективные карточки</p></div>
+            <div class="footer-section"><h4>Продукт</h4><p><a onclick="showTab('upload')">Возможности</a></p><p><a onclick="showTab('import')">Импорт</a></p></div>
+            <div class="footer-section"><h4>Поддержка</h4><p><a onclick="showTab('qa')">FAQ</a></p></div>
+            <div class="footer-section"><h4>Правовая информация</h4><p><a href="#">Политика конфиденциальности</a></p></div>
         </div>
-        <div class="copyright">
-            © 2026 LinguaOCR. Все права защищены.
-        </div>
+        <div class="copyright">© 2026 LinguaOCR. Все права защищены.</div>
     </footer>
 
     <script>
+        // Конфигурация языков
+        const languageConfig = {
+            chinese: {
+                placeholder: 'Введите иероглиф или предложение...',
+                wordsLabel: 'Иероглифы',
+                notFound: 'Иероглифы не найдены. Попробуйте другое фото или ручной ввод',
+                processing: 'Распознавание иероглифов...'
+            },
+            english: {
+                placeholder: 'Введите слово или предложение...',
+                wordsLabel: 'Слова',
+                notFound: 'Слова не найдены. Попробуйте другое фото или ручной ввод',
+                processing: 'Распознавание слов...'
+            },
+            russian: {
+                placeholder: 'Введите слово или предложение...',
+                wordsLabel: 'Слова',
+                notFound: 'Слова не найдены. Попробуйте другое фото или ручной ввод',
+                processing: 'Распознавание слов...'
+            }
+        };
+
         let currentLanguage = 'chinese';
         let currentDeck = [];
         let reviewCards = [];
         let currentCardIndex = 0;
-        let recentlyAdded = []; // Для отображения добавленных карточек
-
-        // Тексты для разных языков
-        const langTexts = {
-            chinese: {
-                placeholder: "Введите иероглиф или слово...",
-                resultsTitle: "Распознанные иероглифы",
-                notFound: "😕 Иероглифы не найдены. Попробуйте другое фото или ручной ввод",
-                loading: "🔄 Распознавание иероглифов...",
-                wordType: "иероглифов"
-            },
-            english: {
-                placeholder: "Enter a word or phrase...",
-                resultsTitle: "Recognized words",
-                notFound: "😕 No words found. Try another photo or manual input",
-                loading: "🔄 Recognizing words...",
-                wordType: "words"
-            },
-            russian: {
-                placeholder: "Введите слово или фразу...",
-                resultsTitle: "Распознанные слова",
-                notFound: "😕 Слова не найдены. Попробуйте другое фото или ручной ввод",
-                loading: "🔄 Распознавание слов...",
-                wordType: "слов"
-            }
+        let isReviewActive = false;
+        
+        // Данные для каждой вкладки языка
+        let tempAddedWordsByLang = {
+            chinese: [],
+            english: [],
+            russian: []
         };
+        
+        let addedButtonsState = {}; // отслеживание добавленных кнопок
 
-        // Обновление текстов при смене языка
-        function updateLanguageTexts() {
-            const texts = langTexts[currentLanguage];
-            const input = document.getElementById('manualWord');
-            if (input) input.placeholder = texts.placeholder;
+        // Показать уведомление
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        // Обновление UI при смене языка
+        function updateLanguageUI() {
+            const config = languageConfig[currentLanguage];
+            const manualInput = document.getElementById('manualWord');
+            if (manualInput) manualInput.placeholder = config.placeholder;
+            const resultsTitle = document.getElementById('resultsTitle');
+            if (resultsTitle) resultsTitle.textContent = config.wordsLabel;
             
-            const title = document.getElementById('resultsTitle');
-            if (title) title.textContent = texts.resultsTitle;
+            // Обновляем отображение "Только что добавленные" для текущего языка
+            updateTempAddedDisplay();
         }
 
         // Переключение языка
@@ -774,28 +561,47 @@
                 document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 currentLanguage = btn.dataset.lang;
-                updateLanguageTexts();
+                updateLanguageUI();
                 await loadDeck();
+                // Останавливаем повторение при смене языка
+                if (isReviewActive) {
+                    isReviewActive = false;
+                    document.getElementById('reviewCard').style.display = 'none';
+                    document.getElementById('reviewContainer').style.display = 'flex';
+                }
             });
         });
 
-        // Загрузка колоды
+        // Переключение вкладок
+        function showTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.getElementById(`${tabId}-tab`).classList.add('active');
+            
+            if (tabId !== 'review' && isReviewActive) {
+                isReviewActive = false;
+                document.getElementById('reviewCard').style.display = 'none';
+                document.getElementById('reviewContainer').style.display = 'flex';
+            }
+            
+            if (tabId === 'deck') loadDeck();
+            if (tabId === 'manual') updateTempAddedDisplay();
+        }
+
+        // Загрузка колоды для текущего языка
         async function loadDeck() {
             const response = await fetch(`/api/deck/${currentLanguage}`);
             currentDeck = await response.json();
             updateDeckUI();
-            updateStats();
         }
 
         function updateDeckUI() {
             const container = document.getElementById('deckGrid');
             if (!container) return;
-            
             if (currentDeck.length === 0) {
                 container.innerHTML = '<div class="empty-deck">📭 Нет слов. Добавьте слова через OCR или ручной ввод</div>';
+                document.getElementById('deckStats').textContent = '0 слов';
                 return;
             }
-            
             container.innerHTML = currentDeck.map(item => `
                 <div class="deck-item">
                     <div class="deck-word">${escapeHtml(item.word)}</div>
@@ -803,11 +609,7 @@
                     <button class="delete-word" onclick="deleteWord('${escapeHtml(item.word)}')">✖</button>
                 </div>
             `).join('');
-        }
-
-        function updateStats() {
-            const stats = document.getElementById('deckStats');
-            if (stats) stats.textContent = `${currentDeck.length} слов`;
+            document.getElementById('deckStats').textContent = `${currentDeck.length} слов`;
         }
 
         async function deleteWord(word) {
@@ -816,54 +618,77 @@
         }
 
         async function clearDeck() {
-            if (confirm('Удалить все слова?')) {
+            if (confirm('Удалить все слова из колоды?')) {
                 await fetch(`/api/deck/${currentLanguage}`, { method: 'DELETE' });
                 await loadDeck();
             }
         }
 
-        // Вставка из буфера обмена
-        document.addEventListener('paste', async (e) => {
-            const items = e.clipboardData.items;
-            for (const item of items) {
-                if (item.type.indexOf('image') !== -1) {
-                    const file = item.getAsFile();
-                    if (file && showTab('upload')) {
-                        await processImage(file);
-                    }
-                    break;
-                }
-            }
-        });
+        // Превью
+        function showPreview(imageBase64) {
+            const dropZone = document.getElementById('dropZone');
+            const previewImg = document.getElementById('previewImg');
+            const previewContainer = document.getElementById('previewContainer');
+            
+            previewImg.src = imageBase64;
+            dropZone.classList.add('with-preview');
+            previewContainer.style.display = 'block';
+        }
+
+        function clearPreview() {
+            const dropZone = document.getElementById('dropZone');
+            const previewContainer = document.getElementById('previewContainer');
+            const fileInput = document.getElementById('fileInput');
+            
+            dropZone.classList.remove('with-preview');
+            previewContainer.style.display = 'none';
+            previewContainer.querySelector('img').src = '';
+            fileInput.value = '';
+            
+            // Скрываем результаты
+            document.getElementById('resultsSection').style.display = 'none';
+        }
 
         // Drag & Drop
         const dropZone = document.getElementById('dropZone');
         const fileInput = document.getElementById('fileInput');
 
         if (dropZone) {
-            dropZone.addEventListener('click', () => fileInput.click());
-            dropZone.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                dropZone.classList.add('drag-over');
+            dropZone.addEventListener('click', (e) => {
+                if (!e.target.closest('.remove-preview-btn')) {
+                    fileInput.click();
+                }
             });
+            dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
             dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
             dropZone.addEventListener('drop', async (e) => {
                 e.preventDefault();
                 dropZone.classList.remove('drag-over');
                 const file = e.dataTransfer.files[0];
-                if (file && file.type.startsWith('image/')) {
-                    await processImage(file);
-                }
+                if (file && file.type.startsWith('image/')) await processImage(file);
             });
+        }
+        if (fileInput) {
+            fileInput.addEventListener('change', async (e) => { if (e.target.files[0]) await processImage(e.target.files[0]); });
         }
 
-        if (fileInput) {
-            fileInput.addEventListener('change', async (e) => {
-                if (e.target.files[0]) {
-                    await processImage(e.target.files[0]);
+        document.getElementById('clipboardBtn')?.addEventListener('click', async () => {
+            try {
+                const clipboardItems = await navigator.clipboard.read();
+                for (const item of clipboardItems) {
+                    const imageTypes = item.types.filter(type => type.startsWith('image/'));
+                    if (imageTypes.length > 0) {
+                        const blob = await item.getType(imageTypes[0]);
+                        const file = new File([blob], 'clipboard.png', { type: blob.type });
+                        await processImage(file);
+                        return;
+                    }
                 }
-            });
-        }
+                showToast('В буфере обмена нет изображения');
+            } catch (err) {
+                showToast('Не удалось получить изображение из буфера обмена');
+            }
+        });
 
         async function processImage(file) {
             const formData = new FormData();
@@ -872,37 +697,52 @@
 
             const resultsSection = document.getElementById('resultsSection');
             const wordsGrid = document.getElementById('wordsGrid');
+            const config = languageConfig[currentLanguage];
             
             resultsSection.style.display = 'block';
-            const texts = langTexts[currentLanguage];
-            wordsGrid.innerHTML = `<div class="loading"><span class="loading-spinner"></span> ${texts.loading}</div>`;
+            wordsGrid.innerHTML = `<div style="text-align: center; padding: 40px;">${config.processing}</div>`;
 
             try {
                 const response = await fetch('/api/ocr', { method: 'POST', body: formData });
                 const data = await response.json();
 
-                if (data.words && data.words.length > 0) {
+                if (data.image_preview) {
+                    showPreview(data.image_preview);
+                }
+
+                if (data.error) {
+                    wordsGrid.innerHTML = `<div style="text-align: center; padding: 40px; color: #888;">❌ Ошибка: ${data.error}<br><br>Проверьте файл ollama_debug.log</div>`;
+                } else if (data.words && data.words.length > 0) {
                     displayResults(data.words);
                 } else {
-                    wordsGrid.innerHTML = `<div class="loading">${texts.notFound}</div>`;
+                    wordsGrid.innerHTML = `<div style="text-align: center; padding: 40px; color: #888;">${config.notFound}</div>`;
                 }
             } catch (error) {
-                wordsGrid.innerHTML = `<div class="loading">❌ Ошибка: ${error.message}</div>`;
+                wordsGrid.innerHTML = `<div style="text-align: center; padding: 40px; color: #888;">❌ Ошибка соединения. Проверьте, запущен ли сервер.</div>`;
             }
         }
 
         function displayResults(words) {
             const container = document.getElementById('wordsGrid');
-            const stats = document.getElementById('resultsStats');
-            stats.textContent = `${words.length} ${langTexts[currentLanguage].wordType}`;
+            document.getElementById('resultsStats').textContent = `${words.length} слов`;
             
             container.innerHTML = words.map(word => `
                 <div class="word-card">
                     <div class="word-text">${escapeHtml(word.word)}</div>
                     <div class="word-translation">${escapeHtml(word.translation || '')}</div>
-                    <button class="add-btn" onclick="addToDeck('${escapeHtml(word.word)}', '${escapeHtml(word.translation || '')}')">➕ Добавить</button>
+                    <button class="add-btn" data-word="${escapeHtml(word.word)}" data-translation="${escapeHtml(word.translation || '')}" onclick="addToDeckAndRefresh(this, '${escapeHtml(word.word)}', '${escapeHtml(word.translation || '')}')">➕ Добавить</button>
                 </div>
             `).join('');
+            
+            // Проверяем, какие слова уже есть в колоде
+            for (const item of currentDeck) {
+                const btn = document.querySelector(`.add-btn[data-word="${item.word}"]`);
+                if (btn) {
+                    btn.textContent = '✓ Добавлено';
+                    btn.classList.add('added');
+                    btn.disabled = true;
+                }
+            }
         }
 
         async function addToDeck(word, translation) {
@@ -912,51 +752,30 @@
                 body: JSON.stringify({ word, translation })
             });
             const data = await response.json();
-            
-            if (data.status === 'added') {
-                // Добавляем в список недавно добавленных
-                recentlyAdded.unshift({ word, translation });
-                if (recentlyAdded.length > 10) recentlyAdded.pop();
-                updateAddedCardsDisplay();
+            return data.status === 'added';
+        }
+
+        async function addToDeckAndRefresh(btn, word, translation) {
+            const added = await addToDeck(word, translation);
+            if (added) {
+                showToast(`✅ "${word}" добавлен в колоду`);
+                btn.textContent = '✓ Добавлено';
+                btn.classList.add('added');
+                btn.disabled = true;
+                
+                // Добавляем во временные карточки для текущего языка
+                tempAddedWordsByLang[currentLanguage].unshift({ word, translation });
+                updateTempAddedDisplay();
                 await loadDeck();
-            } else if (data.status === 'exists') {
-                showTemporaryMessage(`⚠️ "${word}" уже есть в колоде`);
+            } else {
+                showToast(`⚠️ "${word}" уже есть в колоде`);
+                btn.textContent = '✓ Добавлено';
+                btn.classList.add('added');
+                btn.disabled = true;
             }
         }
 
-        function updateAddedCardsDisplay() {
-            const section = document.getElementById('addedCardsSection');
-            const grid = document.getElementById('addedCardsGrid');
-            
-            if (recentlyAdded.length > 0 && section) {
-                section.style.display = 'block';
-                grid.innerHTML = recentlyAdded.map(item => `
-                    <div class="added-card-item">
-                        <span class="added-card-word">${escapeHtml(item.word)}</span>
-                        <button class="added-card-undo" onclick="undoAdd('${escapeHtml(item.word)}')">✖</button>
-                    </div>
-                `).join('');
-            } else if (section) {
-                section.style.display = 'none';
-            }
-        }
-
-        async function undoAdd(word) {
-            await deleteWord(word);
-            recentlyAdded = recentlyAdded.filter(item => item.word !== word);
-            updateAddedCardsDisplay();
-            await loadDeck();
-        }
-
-        function showTemporaryMessage(message) {
-            const msgDiv = document.createElement('div');
-            msgDiv.textContent = message;
-            msgDiv.style.cssText = 'position: fixed; bottom: 20px; right: 20px; background: #1a1a1a; color: white; padding: 12px 20px; border-radius: 8px; z-index: 1000; animation: fadeOut 2s ease-out forwards;';
-            document.body.appendChild(msgDiv);
-            setTimeout(() => msgDiv.remove(), 2000);
-        }
-
-        // Ручной ввод
+        // Ручной ввод с временными карточками для каждого языка
         async function addManualWord() {
             const input = document.getElementById('manualWord');
             const word = input.value.trim();
@@ -973,79 +792,66 @@
                 translation = data.pinyin;
             }
             
-            const response = await fetch(`/api/deck/${currentLanguage}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ word, translation })
-            });
-            const data = await response.json();
-            
-            if (data.status === 'added') {
-                recentlyAdded.unshift({ word, translation });
-                if (recentlyAdded.length > 10) recentlyAdded.pop();
-                updateAddedCardsDisplay();
-                await loadDeck();
+            const added = await addToDeck(word, translation);
+            if (added) {
+                tempAddedWordsByLang[currentLanguage].unshift({ word, translation });
+                updateTempAddedDisplay();
                 input.value = '';
-                document.getElementById('manualPreview').innerHTML = '';
-            } else if (data.status === 'exists') {
-                showTemporaryMessage(`⚠️ "${word}" уже есть в колоде`);
+                showToast(`✅ "${word}" добавлен в колоду`);
+                await loadDeck();
+            } else {
+                showToast(`⚠️ "${word}" уже есть в колоде`);
             }
         }
 
-        // Обработка Enter в поле ввода
-        document.getElementById('manualWord')?.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                addManualWord();
+        function updateTempAddedDisplay() {
+            const section = document.getElementById('addedWordsSection');
+            const grid = document.getElementById('addedWordsGrid');
+            const words = tempAddedWordsByLang[currentLanguage];
+            
+            if (words.length === 0) {
+                section.style.display = 'none';
+                return;
             }
-        });
+            section.style.display = 'block';
+            grid.innerHTML = words.slice(0, 10).map(item => `
+                <div class="added-word-card">
+                    <span class="added-word-text">${escapeHtml(item.word)}</span>
+                    <span style="font-size: 12px; color: #888;">${escapeHtml(item.translation)}</span>
+                </div>
+            `).join('');
+        }
 
-        // Показ пиньиня при вводе (для китайского)
-        document.getElementById('manualWord')?.addEventListener('input', async (e) => {
-            const word = e.target.value.trim();
-            if (word && currentLanguage === 'chinese') {
-                const response = await fetch('/api/pinyin', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ text: word })
-                });
-                const data = await response.json();
-                document.getElementById('manualPreview').innerHTML = data.pinyin ? `📖 ${data.pinyin}` : '';
-            } else {
-                document.getElementById('manualPreview').innerHTML = '';
-            }
-        });
-
-        // Повторение
+        // Повторение (только для текущего языка)
         function startReview() {
             if (currentDeck.length === 0) {
                 document.getElementById('noCardsMsg').style.display = 'block';
                 document.getElementById('reviewCard').style.display = 'none';
+                document.getElementById('reviewContainer').style.display = 'flex';
                 return;
             }
-            
             reviewCards = [...currentDeck];
-            shuffleArray(reviewCards);
+            for (let i = reviewCards.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [reviewCards[i], reviewCards[j]] = [reviewCards[j], reviewCards[i]];
+            }
             currentCardIndex = 0;
+            isReviewActive = true;
             document.getElementById('noCardsMsg').style.display = 'none';
             document.getElementById('reviewCard').style.display = 'block';
+            document.getElementById('reviewContainer').style.display = 'none';
             showCurrentCard();
         }
 
-        function shuffleArray(arr) {
-            for (let i = arr.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [arr[i], arr[j]] = [arr[j], arr[i]];
-            }
-        }
-
         function showCurrentCard() {
+            if (!isReviewActive) return;
             if (currentCardIndex >= reviewCards.length) {
-                showTemporaryMessage('🎉 Поздравляю! Вы повторили все слова!');
-                startReview();
+                showToast('🎉 Поздравляю! Вы повторили все слова!');
+                isReviewActive = false;
+                document.getElementById('reviewCard').style.display = 'none';
+                document.getElementById('reviewContainer').style.display = 'flex';
                 return;
             }
-            
             const card = reviewCards[currentCardIndex];
             document.getElementById('reviewWord').textContent = card.word;
             document.getElementById('reviewTranslation').textContent = card.translation || '';
@@ -1057,6 +863,7 @@
         }
 
         function nextCard(result) {
+            if (!isReviewActive) return;
             if (result === 'again') {
                 reviewCards.push(reviewCards[currentCardIndex]);
             }
@@ -1064,61 +871,33 @@
             showCurrentCard();
         }
 
+        document.getElementById('reviewWord')?.addEventListener('click', revealAnswer);
+
         // Импорт Anki
         async function importAnki() {
             const text = document.getElementById('importText').value;
             const lines = text.split('\n');
             let imported = 0;
-            
             for (const line of lines) {
                 let [word, translation] = line.split(';');
                 word = word?.trim();
                 translation = translation?.trim() || '';
                 if (word) {
-                    const response = await fetch(`/api/deck/${currentLanguage}`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ word, translation })
-                    });
-                    const data = await response.json();
-                    if (data.status === 'added') imported++;
+                    const added = await addToDeck(word, translation);
+                    if (added) imported++;
                 }
             }
-            
-            showTemporaryMessage(`Импортировано ${imported} слов`);
+            showToast(`Импортировано ${imported} слов`);
             await loadDeck();
-        }
-
-        // Переключение вкладок
-        function showTab(tabId) {
-            document.querySelectorAll('.tab-content').forEach(tab => {
-                tab.style.display = 'none';
-            });
-            const activeTab = document.getElementById(`${tabId}-tab`);
-            if (activeTab) activeTab.style.display = 'block';
         }
 
         function escapeHtml(str) {
             if (!str) return '';
-            return str.replace(/[&<>]/g, function(m) {
-                if (m === '&') return '&amp;';
-                if (m === '<') return '&lt;';
-                if (m === '>') return '&gt;';
-                return m;
-            });
+            return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m] || m));
         }
 
-        // CSS анимация для fadeOut
-        const style = document.createElement('style');
-        style.textContent = `@keyframes fadeOut { 0% { opacity: 1; } 70% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }`;
-        document.head.appendChild(style);
-
         // Инициализация
-        document.getElementById('startReviewBtn')?.addEventListener('click', startReview);
-        document.getElementById('addManualBtn')?.addEventListener('click', addManualWord);
-        document.getElementById('reviewWord')?.addEventListener('click', revealAnswer);
-        
-        updateLanguageTexts();
+        updateLanguageUI();
         loadDeck();
     </script>
 </body>
