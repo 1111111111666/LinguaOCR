@@ -125,7 +125,20 @@ def get_pinyin(word):
         return ' '.join([r[0] for r in result if r])
     except:
         return ''
-
+    
+def get_translation_for_word(word, source_lang='zh-CN', target_lang='ru'):
+    """
+    Получить перевод слова с помощью Google Translate
+    """
+    if not word:
+        return ''
+    try:
+        translator = GoogleTranslator(source=source_lang, target=target_lang)
+        translation = translator.translate(word)
+        return translation
+    except Exception as e:
+        print(f"Ошибка перевода слова '{word}': {e}")
+        return ''
 # ============================================================
 # ТЕКСТОВАЯ ОБРАБОТКА
 # ============================================================
@@ -262,13 +275,11 @@ def process_ocr_text(text, language='chinese'):
     """
     Основная функция обработки распознанного текста
     """
-    # Очистка текста
     cleaned = clean_text(text, language)
     
     print(f"📝 Очищенный текст: {cleaned[:200]}...")
     
     if language == 'chinese':
-        # Для китайского - токенизация на слова
         tokens = tokenize_chinese(cleaned)
     elif language == 'english':
         tokens = tokenize_english(cleaned)
@@ -277,7 +288,6 @@ def process_ocr_text(text, language='chinese'):
     
     print(f"🔤 Токены: {tokens[:20]}...")
     
-    # Удаление дубликатов с сохранением порядка
     seen = set()
     unique_tokens = []
     for token in tokens:
@@ -285,18 +295,25 @@ def process_ocr_text(text, language='chinese'):
             seen.add(token)
             unique_tokens.append(token)
     
-    # Формирование результата
     result = []
     for token in unique_tokens[:50]:
-        # Пропускаем пустые токены
         if not token or token.strip() == '':
             continue
         
         item = {'word': token}
+        
         if language == 'chinese':
-            item['translation'] = get_pinyin(token)
+            # Для китайского: пиньинь + перевод
+            pinyin_text = get_pinyin(token)
+            translation = get_translation_for_word(token, 'zh-CN', 'ru')
+            item['translation'] = f"{pinyin_text} - {translation}" if translation else pinyin_text
+        elif language == 'english':
+            translation = get_translation_for_word(token, 'en', 'ru')
+            item['translation'] = translation if translation else ''
         else:
-            item['translation'] = ''
+            translation = get_translation_for_word(token, 'ru', 'en')
+            item['translation'] = translation if translation else ''
+        
         result.append(item)
     
     return result
@@ -439,6 +456,14 @@ def add_word(language):
     data = request.json
     word = data.get('word')
     translation = data.get('translation', '')
+    
+    # Если перевод не передан, получаем его автоматически
+    if not translation and language == 'chinese':
+        translation = get_translation_for_word(word, 'zh-CN', 'ru')
+    elif not translation and language == 'english':
+        translation = get_translation_for_word(word, 'en', 'ru')
+    elif not translation and language == 'russian':
+        translation = get_translation_for_word(word, 'ru', 'en')
     
     deck = load_deck(language)
     

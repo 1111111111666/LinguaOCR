@@ -58,5 +58,30 @@
     "word": "brown",
     "translation": "",
     "timestamp": 11
+  },
+  {
+    "word": "max",
+    "translation": "Макс",
+    "timestamp": 12
+  },
+  {
+    "word": "name",
+    "translation": "имя",
+    "timestamp": 13
+  },
+  {
+    "word": "swim",
+    "translation": "плавать",
+    "timestamp": 14
+  },
+  {
+    "word": "meat",
+    "translation": "мясо",
+    "timestamp": 15
+  },
+  {
+    "word": "friend",
+    "translation": "друг",
+    "timestamp": 16
   }
 ]

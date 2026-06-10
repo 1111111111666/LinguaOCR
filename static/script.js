@@ -29,35 +29,30 @@ let reviewCards = [];
 let currentCardIndex = 0;
 let isReviewActive = false;
 
-// Данные для каждой вкладки языка
 let manualAddedWordsByLang = {
     chinese: [],
     english: [],
     russian: []
 };
 
-// Хранилище результатов OCR для каждого языка
 let ocrResultsByLang = {
     chinese: null,
     english: null,
     russian: null
 };
 
-// Хранилище превью для каждого языка
 let previewsByLang = {
     chinese: null,
     english: null,
     russian: null
 };
 
-// Хранилище статуса распознавания для каждого языка (активно или нет)
 let processingStatusByLang = {
     chinese: false,
     english: false,
     russian: false
 };
 
-// Показать уведомление
 function showToast(message, isError = false) {
     const toast = document.getElementById('toast');
     toast.textContent = message;
@@ -74,7 +69,6 @@ function getLanguageName(lang) {
     return names[lang] || lang;
 }
 
-// Обновление UI при смене языка
 function updateLanguageUI() {
     const config = languageConfig[currentLanguage];
     const manualInput = document.getElementById('manualWord');
@@ -86,7 +80,6 @@ function updateLanguageUI() {
     updateOCRDisplayForCurrentLanguage();
 }
 
-// Обновление отображения OCR для текущего языка
 async function updateOCRDisplayForCurrentLanguage() {
     const resultsSection = document.getElementById('resultsSection');
     const wordsGrid = document.getElementById('wordsGrid');
@@ -94,7 +87,6 @@ async function updateOCRDisplayForCurrentLanguage() {
     const previewContainer = document.getElementById('previewContainer');
     const previewImg = document.getElementById('previewImg');
     
-    // Восстанавливаем превью
     if (previewsByLang[currentLanguage]) {
         previewImg.src = previewsByLang[currentLanguage];
         dropZone.classList.add('with-preview');
@@ -105,7 +97,6 @@ async function updateOCRDisplayForCurrentLanguage() {
         previewImg.src = '';
     }
     
-    // Показываем результаты или индикатор распознавания
     if (ocrResultsByLang[currentLanguage] && ocrResultsByLang[currentLanguage].words) {
         resultsSection.style.display = 'block';
         await displayResults(ocrResultsByLang[currentLanguage].words);
@@ -118,7 +109,6 @@ async function updateOCRDisplayForCurrentLanguage() {
     }
 }
 
-// Переключение языка
 document.querySelectorAll('.lang-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
         document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
@@ -134,7 +124,6 @@ document.querySelectorAll('.lang-btn').forEach(btn => {
     });
 });
 
-// Переключение вкладок
 function showTab(tabId) {
     document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
     document.getElementById(`${tabId}-tab`).classList.add('active');
@@ -150,7 +139,6 @@ function showTab(tabId) {
     if (tabId === 'upload') updateOCRDisplayForCurrentLanguage();
 }
 
-// Загрузка колоды для текущего языка
 async function loadDeck() {
     try {
         const response = await fetch(`/api/deck/${currentLanguage}`);
@@ -182,7 +170,6 @@ function updateDeckUI() {
 async function deleteWord(word) {
     await fetch(`/api/deck/${currentLanguage}/${encodeURIComponent(word)}`, { method: 'DELETE' });
     await loadDeck();
-    // Обновляем отображение OCR, чтобы кнопки обновились
     if (ocrResultsByLang[currentLanguage]) {
         await displayResults(ocrResultsByLang[currentLanguage].words);
     }
@@ -198,7 +185,6 @@ async function clearDeck() {
     }
 }
 
-// Показываем превью и сохраняем для текущего языка
 function showPreviewForLanguage(imageBase64, language) {
     previewsByLang[language] = imageBase64;
     
@@ -235,7 +221,6 @@ function clearPreview() {
     clearPreviewForLanguage(currentLanguage);
 }
 
-// Глобальный обработчик Ctrl+V
 document.addEventListener('paste', async (e) => {
     const activeTab = document.querySelector('.tab-content.active')?.id;
     if (activeTab !== 'upload-tab') return;
@@ -254,7 +239,6 @@ document.addEventListener('paste', async (e) => {
     }
 });
 
-// Drag & Drop и загрузка
 const dropZone = document.getElementById('dropZone');
 const fileInput = document.getElementById('fileInput');
 
@@ -277,7 +261,6 @@ if (fileInput) {
     fileInput.addEventListener('change', async (e) => { if (e.target.files[0]) await processImage(e.target.files[0]); });
 }
 
-// Кнопка буфера обмена
 const clipboardBtn = document.getElementById('clipboardBtn');
 if (clipboardBtn) {
     clipboardBtn.addEventListener('click', async (e) => {
@@ -310,18 +293,15 @@ async function processImage(file) {
     const ocrLanguage = currentLanguage;
     const config = languageConfig[ocrLanguage];
     
-    // Сразу показываем превью
     const reader = new FileReader();
     reader.onload = (e) => {
         showPreviewForLanguage(e.target.result, ocrLanguage);
     };
     reader.readAsDataURL(file);
     
-    // Очищаем старые результаты и устанавливаем статус распознавания
     ocrResultsByLang[ocrLanguage] = null;
     processingStatusByLang[ocrLanguage] = true;
     
-    // Показываем индикатор загрузки
     const resultsSection = document.getElementById('resultsSection');
     const wordsGrid = document.getElementById('wordsGrid');
     resultsSection.style.display = 'block';
@@ -335,7 +315,6 @@ async function processImage(file) {
         const response = await fetch('/api/ocr', { method: 'POST', body: formData });
         const data = await response.json();
 
-        // Завершаем распознавание
         processingStatusByLang[ocrLanguage] = false;
 
         if (data.error) {
@@ -363,10 +342,8 @@ async function displayResults(words) {
     const container = document.getElementById('wordsGrid');
     document.getElementById('resultsStats').textContent = `${words.length} слов`;
     
-    // Загружаем актуальную колоду
     await loadDeck();
     
-    // Создаём Set существующих слов для быстрой проверки
     const existingWords = new Set(currentDeck.map(item => item.word));
     
     container.innerHTML = words.map(word => {
@@ -382,7 +359,6 @@ async function displayResults(words) {
         `;
     }).join('');
     
-    // Проставляем стили для уже добавленных кнопок
     for (const item of currentDeck) {
         const btn = document.querySelector(`.add-btn[data-word="${item.word}"]`);
         if (btn) {
@@ -417,7 +393,6 @@ async function addToDeckAndRefresh(btn, word, translation) {
         btn.disabled = true;
         await loadDeck();
         
-        // Обновляем все кнопки в текущем отображении
         const allBtns = document.querySelectorAll('.add-btn');
         for (const button of allBtns) {
             const btnWord = button.getAttribute('data-word');
@@ -435,7 +410,7 @@ async function addToDeckAndRefresh(btn, word, translation) {
     }
 }
 
-// Ручной ввод
+// Ручной ввод с переводом
 async function addManualWord() {
     const input = document.getElementById('manualWord');
     const word = input.value.trim();
@@ -464,7 +439,6 @@ async function addManualWord() {
         showToast(`✅ "${word}" добавлен в колоду`);
         await loadDeck();
         
-        // Обновляем отображение OCR, если есть
         if (ocrResultsByLang[currentLanguage]) {
             await displayResults(ocrResultsByLang[currentLanguage].words);
         }
@@ -491,7 +465,7 @@ function updateTempAddedDisplay() {
     `).join('');
 }
 
-// Повторение
+// Повторение с переворотом карточки
 function startReview() {
     if (currentDeck.length === 0) {
         document.getElementById('noCardsMsg').style.display = 'block';
@@ -525,10 +499,17 @@ function showCurrentCard() {
     document.getElementById('reviewWord').textContent = card.word;
     document.getElementById('reviewTranslation').textContent = card.translation || '';
     document.getElementById('reviewTranslation').style.display = 'none';
+    // Показываем переднюю сторону
+    document.querySelector('.review-card').style.cursor = 'pointer';
 }
 
-function revealAnswer() {
-    document.getElementById('reviewTranslation').style.display = 'block';
+function flipCard() {
+    const translation = document.getElementById('reviewTranslation');
+    if (translation.style.display === 'none') {
+        translation.style.display = 'block';
+    } else {
+        translation.style.display = 'none';
+    }
 }
 
 function nextCard(result) {
@@ -540,9 +521,10 @@ function nextCard(result) {
     showCurrentCard();
 }
 
-document.getElementById('reviewWord')?.addEventListener('click', revealAnswer);
+// Привязываем клик по карточке к перевороту
+document.getElementById('reviewWord')?.addEventListener('click', flipCard);
+document.getElementById('reviewTranslation')?.addEventListener('click', flipCard);
 
-// Импорт Anki
 async function importAnki() {
     const text = document.getElementById('importText').value;
     const lines = text.split('\n');
@@ -559,7 +541,6 @@ async function importAnki() {
     showToast(`Импортировано ${imported} слов`);
     await loadDeck();
     
-    // Обновляем отображение OCR, если есть
     if (ocrResultsByLang[currentLanguage]) {
         await displayResults(ocrResultsByLang[currentLanguage].words);
     }
@@ -570,6 +551,5 @@ function escapeHtml(str) {
     return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m] || m));
 }
 
-// Инициализация
 updateLanguageUI();
 loadDeck();
