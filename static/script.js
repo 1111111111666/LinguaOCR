@@ -1,25 +1,25 @@
 // Конфигурация языков
 const languageConfig = {
     chinese: {
-        placeholder: 'Введите иероглиф или предложение...',
-        wordsLabel: 'Иероглифы',
-        notFound: 'Иероглифы не найдены. Попробуйте другое фото или ручной ввод',
-        processing: 'Распознавание иероглифов...',
-        waiting: '⏳ Подождите, идёт распознавание иероглифов в другой вкладке...'
+        placeholder: 'Введите слово или предложение...',
+        wordsLabel: 'Слова',
+        notFound: 'Слова не найдены. Попробуйте другое фото или ручной ввод',
+        processing: 'Распознавание текста...',
+        completed: '✅ Распознавание китайского текста завершено!'
     },
     english: {
         placeholder: 'Введите слово или предложение...',
         wordsLabel: 'Слова',
         notFound: 'Слова не найдены. Попробуйте другое фото или ручной ввод',
-        processing: 'Распознавание слов...',
-        waiting: '⏳ Подождите, идёт распознавание слов в другой вкладке...'
+        processing: 'Распознавание текста...',
+        completed: '✅ Распознавание английского текста завершено!'
     },
     russian: {
         placeholder: 'Введите слово или предложение...',
         wordsLabel: 'Слова',
         notFound: 'Слова не найдены. Попробуйте другое фото или ручной ввод',
-        processing: 'Распознавание слов...',
-        waiting: '⏳ Подождите, идёт распознавание слов в другой вкладке...'
+        processing: 'Распознавание текста...',
+        completed: '✅ Распознавание русского текста завершено!'
     }
 };
 
@@ -50,15 +50,28 @@ let previewsByLang = {
     russian: null
 };
 
-// Текущий активный OCR процесс
-let activeOcrLanguage = null;
+// Хранилище статуса распознавания для каждого языка (активно или нет)
+let processingStatusByLang = {
+    chinese: false,
+    english: false,
+    russian: false
+};
 
 // Показать уведомление
-function showToast(message) {
+function showToast(message, isError = false) {
     const toast = document.getElementById('toast');
     toast.textContent = message;
+    toast.style.background = isError ? '#dc2626' : '#1a1a1a';
     toast.classList.add('show');
-    setTimeout(() => toast.classList.remove('show'), 3000);
+    setTimeout(() => {
+        toast.classList.remove('show');
+        toast.style.background = '#1a1a1a';
+    }, 3000);
+}
+
+function getLanguageName(lang) {
+    const names = { chinese: 'китайского', english: 'английского', russian: 'русского' };
+    return names[lang] || lang;
 }
 
 // Обновление UI при смене языка
@@ -74,14 +87,14 @@ function updateLanguageUI() {
 }
 
 // Обновление отображения OCR для текущего языка
-function updateOCRDisplayForCurrentLanguage() {
+async function updateOCRDisplayForCurrentLanguage() {
     const resultsSection = document.getElementById('resultsSection');
     const wordsGrid = document.getElementById('wordsGrid');
     const dropZone = document.getElementById('dropZone');
     const previewContainer = document.getElementById('previewContainer');
     const previewImg = document.getElementById('previewImg');
     
-    // Восстанавливаем превью если было
+    // Восстанавливаем превью
     if (previewsByLang[currentLanguage]) {
         previewImg.src = previewsByLang[currentLanguage];
         dropZone.classList.add('with-preview');
@@ -92,16 +105,15 @@ function updateOCRDisplayForCurrentLanguage() {
         previewImg.src = '';
     }
     
-    // Показываем результаты если есть
+    // Показываем результаты или индикатор распознавания
     if (ocrResultsByLang[currentLanguage] && ocrResultsByLang[currentLanguage].words) {
         resultsSection.style.display = 'block';
-        displayResults(ocrResultsByLang[currentLanguage].words);
-    } else if (activeOcrLanguage && activeOcrLanguage !== currentLanguage) {
-        // Распознавание идёт в другой вкладке
+        await displayResults(ocrResultsByLang[currentLanguage].words);
+    } else if (processingStatusByLang[currentLanguage]) {
         resultsSection.style.display = 'block';
-        const waitingConfig = languageConfig[currentLanguage];
-        wordsGrid.innerHTML = `<div style="text-align: center; padding: 40px; color: #888;">${waitingConfig.waiting}</div>`;
-    } else if (!ocrResultsByLang[currentLanguage]) {
+        const config = languageConfig[currentLanguage];
+        wordsGrid.innerHTML = `<div style="text-align: center; padding: 40px;">${config.processing}</div>`;
+    } else if (ocrResultsByLang[currentLanguage] === null) {
         resultsSection.style.display = 'none';
     }
 }
@@ -140,9 +152,13 @@ function showTab(tabId) {
 
 // Загрузка колоды для текущего языка
 async function loadDeck() {
-    const response = await fetch(`/api/deck/${currentLanguage}`);
-    currentDeck = await response.json();
-    updateDeckUI();
+    try {
+        const response = await fetch(`/api/deck/${currentLanguage}`);
+        currentDeck = await response.json();
+        updateDeckUI();
+    } catch (e) {
+        console.error('Ошибка загрузки колоды:', e);
+    }
 }
 
 function updateDeckUI() {
@@ -166,12 +182,19 @@ function updateDeckUI() {
 async function deleteWord(word) {
     await fetch(`/api/deck/${currentLanguage}/${encodeURIComponent(word)}`, { method: 'DELETE' });
     await loadDeck();
+    // Обновляем отображение OCR, чтобы кнопки обновились
+    if (ocrResultsByLang[currentLanguage]) {
+        await displayResults(ocrResultsByLang[currentLanguage].words);
+    }
 }
 
 async function clearDeck() {
     if (confirm('Удалить все слова из колоды?')) {
         await fetch(`/api/deck/${currentLanguage}`, { method: 'DELETE' });
         await loadDeck();
+        if (ocrResultsByLang[currentLanguage]) {
+            await displayResults(ocrResultsByLang[currentLanguage].words);
+        }
     }
 }
 
@@ -193,6 +216,7 @@ function showPreviewForLanguage(imageBase64, language) {
 function clearPreviewForLanguage(language) {
     previewsByLang[language] = null;
     ocrResultsByLang[language] = null;
+    processingStatusByLang[language] = false;
     
     if (currentLanguage === language) {
         const dropZone = document.getElementById('dropZone');
@@ -211,38 +235,24 @@ function clearPreview() {
     clearPreviewForLanguage(currentLanguage);
 }
 
-// Разбивка текста на отдельные иероглифы для китайского
-function splitChineseText(text) {
-    const lines = text.split('\n');
-    const result = [];
-    const seen = new Set();
+// Глобальный обработчик Ctrl+V
+document.addEventListener('paste', async (e) => {
+    const activeTab = document.querySelector('.tab-content.active')?.id;
+    if (activeTab !== 'upload-tab') return;
     
-    for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed) continue;
-        
-        // Если строка состоит только из китайских иероглифов
-        if (/^[\u4e00-\u9fff]+$/.test(trimmed)) {
-            if (trimmed.length === 1) {
-                // Один иероглиф
-                if (!seen.has(trimmed)) {
-                    seen.add(trimmed);
-                    result.push(trimmed);
-                }
-            } else {
-                // Строка из нескольких иероглифов - разбиваем
-                for (const char of trimmed) {
-                    if (!seen.has(char)) {
-                        seen.add(char);
-                        result.push(char);
-                    }
-                }
+    const items = e.clipboardData.items;
+    for (const item of items) {
+        if (item.type.startsWith('image/')) {
+            e.preventDefault();
+            const blob = item.getAsFile();
+            if (blob) {
+                const file = new File([blob], 'pasted-image.png', { type: blob.type });
+                await processImage(file);
             }
+            return;
         }
     }
-    
-    return result;
-}
+});
 
 // Drag & Drop и загрузка
 const dropZone = document.getElementById('dropZone');
@@ -267,27 +277,38 @@ if (fileInput) {
     fileInput.addEventListener('change', async (e) => { if (e.target.files[0]) await processImage(e.target.files[0]); });
 }
 
-document.getElementById('clipboardBtn')?.addEventListener('click', async () => {
-    try {
-        const clipboardItems = await navigator.clipboard.read();
-        for (const item of clipboardItems) {
-            const imageTypes = item.types.filter(type => type.startsWith('image/'));
-            if (imageTypes.length > 0) {
-                const blob = await item.getType(imageTypes[0]);
-                const file = new File([blob], 'clipboard.png', { type: blob.type });
-                await processImage(file);
-                return;
+// Кнопка буфера обмена
+const clipboardBtn = document.getElementById('clipboardBtn');
+if (clipboardBtn) {
+    clipboardBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        try {
+            const clipboardItems = await navigator.clipboard.read();
+            let imageFound = false;
+            for (const item of clipboardItems) {
+                const imageTypes = item.types.filter(type => type.startsWith('image/'));
+                if (imageTypes.length > 0) {
+                    const blob = await item.getType(imageTypes[0]);
+                    const file = new File([blob], 'clipboard.png', { type: blob.type });
+                    await processImage(file);
+                    imageFound = true;
+                    return;
+                }
             }
+            if (!imageFound) {
+                showToast('В буфере обмена нет изображения');
+            }
+        } catch (err) {
+            console.error('Ошибка буфера:', err);
+            showToast('Не удалось получить изображение из буфера обмена');
         }
-        showToast('В буфере обмена нет изображения');
-    } catch (err) {
-        showToast('Не удалось получить изображение из буфера обмена');
-    }
-});
+    });
+}
 
 async function processImage(file) {
-    // Определяем язык, из которого загружено фото
     const ocrLanguage = currentLanguage;
+    const config = languageConfig[ocrLanguage];
     
     // Сразу показываем превью
     const reader = new FileReader();
@@ -296,21 +317,15 @@ async function processImage(file) {
     };
     reader.readAsDataURL(file);
     
-    // Очищаем старые результаты для этого языка
+    // Очищаем старые результаты и устанавливаем статус распознавания
     ocrResultsByLang[ocrLanguage] = null;
+    processingStatusByLang[ocrLanguage] = true;
     
-    // Если текущий язык совпадает с языком загрузки, показываем индикатор
-    if (currentLanguage === ocrLanguage) {
-        const resultsSection = document.getElementById('resultsSection');
-        const wordsGrid = document.getElementById('wordsGrid');
-        const config = languageConfig[ocrLanguage];
-        
-        resultsSection.style.display = 'block';
-        wordsGrid.innerHTML = `<div style="text-align: center; padding: 40px;">${config.processing}</div>`;
-    }
-    
-    // Устанавливаем активный OCR процесс
-    activeOcrLanguage = ocrLanguage;
+    // Показываем индикатор загрузки
+    const resultsSection = document.getElementById('resultsSection');
+    const wordsGrid = document.getElementById('wordsGrid');
+    resultsSection.style.display = 'block';
+    wordsGrid.innerHTML = `<div style="text-align: center; padding: 40px;">${config.processing}</div>`;
     
     const formData = new FormData();
     formData.append('image', file);
@@ -320,55 +335,54 @@ async function processImage(file) {
         const response = await fetch('/api/ocr', { method: 'POST', body: formData });
         const data = await response.json();
 
+        // Завершаем распознавание
+        processingStatusByLang[ocrLanguage] = false;
+
         if (data.error) {
-            if (currentLanguage === ocrLanguage) {
-                document.getElementById('wordsGrid').innerHTML = `<div style="text-align: center; padding: 40px; color: #888;">❌ Ошибка: ${data.error}<br><br>Проверьте файл ollama_debug.log</div>`;
-            }
-        } else if (data.words && data.words.length > 0) {
-            // Сохраняем результаты для этого языка
-            ocrResultsByLang[ocrLanguage] = { words: data.words };
-            
-            // Если текущий язык совпадает с языком загрузки, показываем результаты
-            if (currentLanguage === ocrLanguage) {
-                displayResults(data.words);
-            }
-        } else {
-            // Сохраняем пустой результат
             ocrResultsByLang[ocrLanguage] = { words: [] };
-            
-            if (currentLanguage === ocrLanguage) {
-                const config = languageConfig[ocrLanguage];
-                document.getElementById('wordsGrid').innerHTML = `<div style="text-align: center; padding: 40px; color: #888;">${config.notFound}</div>`;
-            }
+            wordsGrid.innerHTML = `<div style="text-align: center; padding: 40px; color: #888;">❌ Ошибка: ${data.error}</div>`;
+            showToast(`❌ Ошибка распознавания: ${data.error}`, true);
+        } else if (data.words && data.words.length > 0) {
+            ocrResultsByLang[ocrLanguage] = { words: data.words };
+            await displayResults(data.words);
+            showToast(config.completed);
+        } else {
+            ocrResultsByLang[ocrLanguage] = { words: [] };
+            wordsGrid.innerHTML = `<div style="text-align: center; padding: 40px; color: #888;">${config.notFound}</div>`;
+            showToast(`⚠️ ${config.notFound}`);
         }
     } catch (error) {
-        if (currentLanguage === ocrLanguage) {
-            document.getElementById('wordsGrid').innerHTML = `<div style="text-align: center; padding: 40px; color: #888;">❌ Ошибка соединения. Проверьте, запущен ли сервер.</div>`;
-        }
-    } finally {
-        if (activeOcrLanguage === ocrLanguage) {
-            activeOcrLanguage = null;
-        }
-        // Если есть результаты для этого языка и он не текущий, просто сохраняем
-        if (currentLanguage !== ocrLanguage && ocrResultsByLang[ocrLanguage]) {
-            // Ничего не делаем, просто сохранили
-            console.log(`Результаты для ${ocrLanguage} сохранены`);
-        }
+        processingStatusByLang[ocrLanguage] = false;
+        ocrResultsByLang[ocrLanguage] = { words: [] };
+        wordsGrid.innerHTML = `<div style="text-align: center; padding: 40px; color: #888;">❌ Ошибка соединения с сервером</div>`;
+        showToast('❌ Ошибка соединения с сервером', true);
     }
 }
 
-function displayResults(words) {
+async function displayResults(words) {
     const container = document.getElementById('wordsGrid');
     document.getElementById('resultsStats').textContent = `${words.length} слов`;
     
-    container.innerHTML = words.map(word => `
-        <div class="word-card">
-            <div class="word-text">${escapeHtml(word.word)}</div>
-            <div class="word-translation">${escapeHtml(word.translation || '')}</div>
-            <button class="add-btn" data-word="${escapeHtml(word.word)}" data-translation="${escapeHtml(word.translation || '')}" onclick="addToDeckAndRefresh(this, '${escapeHtml(word.word)}', '${escapeHtml(word.translation || '')}')">➕ Добавить</button>
-        </div>
-    `).join('');
+    // Загружаем актуальную колоду
+    await loadDeck();
     
+    // Создаём Set существующих слов для быстрой проверки
+    const existingWords = new Set(currentDeck.map(item => item.word));
+    
+    container.innerHTML = words.map(word => {
+        const isAdded = existingWords.has(word.word);
+        return `
+            <div class="word-card">
+                <div class="word-text">${escapeHtml(word.word)}</div>
+                <div class="word-translation">${escapeHtml(word.translation || '')}</div>
+                <button class="add-btn" data-word="${escapeHtml(word.word)}" data-translation="${escapeHtml(word.translation || '')}" onclick="addToDeckAndRefresh(this, '${escapeHtml(word.word)}', '${escapeHtml(word.translation || '')}')">
+                    ${isAdded ? '✓ Добавлено' : '➕ Добавить'}
+                </button>
+            </div>
+        `;
+    }).join('');
+    
+    // Проставляем стили для уже добавленных кнопок
     for (const item of currentDeck) {
         const btn = document.querySelector(`.add-btn[data-word="${item.word}"]`);
         if (btn) {
@@ -380,13 +394,18 @@ function displayResults(words) {
 }
 
 async function addToDeck(word, translation) {
-    const response = await fetch(`/api/deck/${currentLanguage}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ word, translation })
-    });
-    const data = await response.json();
-    return data.status === 'added';
+    try {
+        const response = await fetch(`/api/deck/${currentLanguage}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ word, translation })
+        });
+        const data = await response.json();
+        return data.status === 'added';
+    } catch (e) {
+        console.error('Ошибка добавления:', e);
+        return false;
+    }
 }
 
 async function addToDeckAndRefresh(btn, word, translation) {
@@ -397,6 +416,17 @@ async function addToDeckAndRefresh(btn, word, translation) {
         btn.classList.add('added');
         btn.disabled = true;
         await loadDeck();
+        
+        // Обновляем все кнопки в текущем отображении
+        const allBtns = document.querySelectorAll('.add-btn');
+        for (const button of allBtns) {
+            const btnWord = button.getAttribute('data-word');
+            if (currentDeck.some(item => item.word === btnWord)) {
+                button.textContent = '✓ Добавлено';
+                button.classList.add('added');
+                button.disabled = true;
+            }
+        }
     } else {
         showToast(`⚠️ "${word}" уже есть в колоде`);
         btn.textContent = '✓ Добавлено';
@@ -413,13 +443,17 @@ async function addManualWord() {
     
     let translation = '';
     if (currentLanguage === 'chinese') {
-        const response = await fetch('/api/pinyin', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text: word })
-        });
-        const data = await response.json();
-        translation = data.pinyin;
+        try {
+            const response = await fetch('/api/pinyin', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: word })
+            });
+            const data = await response.json();
+            translation = data.pinyin;
+        } catch (e) {
+            console.error('Ошибка получения пиньиня:', e);
+        }
     }
     
     const added = await addToDeck(word, translation);
@@ -429,6 +463,11 @@ async function addManualWord() {
         input.value = '';
         showToast(`✅ "${word}" добавлен в колоду`);
         await loadDeck();
+        
+        // Обновляем отображение OCR, если есть
+        if (ocrResultsByLang[currentLanguage]) {
+            await displayResults(ocrResultsByLang[currentLanguage].words);
+        }
     } else {
         showToast(`⚠️ "${word}" уже есть в колоде`);
     }
@@ -519,6 +558,11 @@ async function importAnki() {
     }
     showToast(`Импортировано ${imported} слов`);
     await loadDeck();
+    
+    // Обновляем отображение OCR, если есть
+    if (ocrResultsByLang[currentLanguage]) {
+        await displayResults(ocrResultsByLang[currentLanguage].words);
+    }
 }
 
 function escapeHtml(str) {

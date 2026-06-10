@@ -365,3 +365,79 @@ body {
     .review-word { font-size: 40px; }
     .review-card { padding: 32px; }
 }
+
+
+/* Дополнительные стили для иероглифов */
+.word-text {
+    font-size: 28px;
+    font-weight: 500;
+    margin-bottom: 8px;
+    font-family: 'Inter', 'Noto Sans CJK SC', monospace;
+}
+
+.add-btn.added {
+    background: #48bb78;
+    border-color: #48bb78;
+    color: white;
+    cursor: default;
+}
+
+.add-btn.added:hover {
+    background: #48bb78;
+    transform: none;
+}
+
+/* Анимация загрузки */
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.loading {
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+/* Стили для preview */
+.preview-container {
+    display: none;
+    position: relative;
+}
+
+.upload-zone.with-preview {
+    padding: 0;
+    overflow: hidden;
+    cursor: default;
+}
+
+.upload-zone.with-preview .upload-content {
+    display: none;
+}
+
+.upload-zone.with-preview .preview-container {
+    display: block;
+}
+
+.remove-preview-btn {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: rgba(0,0,0,0.6);
+    color: white;
+    border: none;
+    border-radius: 30px;
+    padding: 8px 16px;
+    cursor: pointer;
+    font-size: 14px;
+    backdrop-filter: blur(4px);
+}
+
+.remove-preview-btn:hover {
+    background: rgba(0,0,0,0.8);
+}
+
+/* Стили для waiting сообщения */
+.waiting-message {
+    text-align: center;
+    padding: 40px;
+    color: #888;
+}

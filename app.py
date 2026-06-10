@@ -10,6 +10,31 @@ import re
 import traceback
 import requests
 
+# NLP библиотеки
+import nltk
+from nltk.tokenize import word_tokenize
+from nltk.corpus import stopwords
+import pymorphy2
+from deep_translator import GoogleTranslator
+
+# Китайская токенизация
+try:
+    import jieba
+    JIEBA_AVAILABLE = True
+    print("✅ jieba загружена для сегментации китайского текста")
+except ImportError:
+    JIEBA_AVAILABLE = False
+    print("⚠️ jieba не установлена. Установите: pip install jieba")
+
+# Инициализация NLTK
+try:
+    nltk.data.find('tokenizers/punkt')
+except LookupError:
+    nltk.download('punkt')
+    nltk.download('punkt_tab')
+    nltk.download('stopwords')
+    nltk.download('averaged_perceptron_tagger')
+
 app = Flask(__name__)
 app.secret_key = 'your-secret-key-change-this'
 app.config['UPLOAD_FOLDER'] = 'uploads'
@@ -24,37 +49,46 @@ LANGUAGES = {
     'chinese': {
         'name': 'Китайский',
         'flag': '🇨🇳',
-        'placeholder': 'Введите иероглиф или предложение...',
-        'ocr_prompt': 'Выпиши все китайские иероглифы с этого изображения. Каждый иероглиф с новой строки. Только иероглифы, без пояснений.',
-        'words_label': 'Иероглифы',
-        'words_not_found': 'Иероглифы не найдены. Попробуйте другое фото или ручной ввод',
-        'processing': 'Распознавание иероглифов...',
-        'file': 'data/chinese.json'
+        'placeholder': 'Введите слово или предложение...',
+        'ocr_prompt': 'Выпиши весь китайский текст с этого изображения. Просто текст, без пояснений.',
+        'words_label': 'Слова',
+        'words_not_found': 'Слова не найдены. Попробуйте другое фото или ручной ввод',
+        'processing': 'Распознавание текста...',
+        'completed': '✅ Распознавание китайского текста завершено!',
+        'file': 'data/chinese.json',
+        'source_lang': 'zh-CN',
+        'target_lang': 'ru'
     },
     'english': {
         'name': 'Английский',
         'flag': '🇬🇧',
-        'placeholder': 'Введите слово или предложение...',
-        'ocr_prompt': 'Выпиши все английские слова с этого изображения. Каждое слово с новой строки. Только слова, без пояснений.',
+        'placeholder': 'Enter a word or sentence...',
+        'ocr_prompt': 'Extract all English text from this image. Just the text, no explanations.',
         'words_label': 'Слова',
         'words_not_found': 'Слова не найдены. Попробуйте другое фото или ручной ввод',
-        'processing': 'Распознавание слов...',
-        'file': 'data/english.json'
+        'processing': 'Распознавание текста...',
+        'completed': '✅ Распознавание английского текста завершено!',
+        'file': 'data/english.json',
+        'source_lang': 'en',
+        'target_lang': 'ru'
     },
     'russian': {
         'name': 'Русский',
         'flag': '🇷🇺',
         'placeholder': 'Введите слово или предложение...',
-        'ocr_prompt': 'Выпиши все русские слова с этого изображения. Каждое слово с новой строки. Только слова, без пояснений.',
+        'ocr_prompt': 'Выпиши весь русский текст с этого изображения. Просто текст, без пояснений.',
         'words_label': 'Слова',
         'words_not_found': 'Слова не найдены. Попробуйте другое фото или ручной ввод',
-        'processing': 'Распознавание слов...',
-        'file': 'data/russian.json'
+        'processing': 'Распознавание текста...',
+        'completed': '✅ Распознавание русского текста завершено!',
+        'file': 'data/russian.json',
+        'source_lang': 'ru',
+        'target_lang': 'en'
     }
 }
 
 # ============================================================
-# РАБОТА С КОЛОДАМИ
+# РАБОТА С КОЛОДОЙ
 # ============================================================
 
 def get_deck_file(language='chinese'):
@@ -93,7 +127,182 @@ def get_pinyin(word):
         return ''
 
 # ============================================================
-# OLLAMA ЛОГИРОВАНИЕ
+# ТЕКСТОВАЯ ОБРАБОТКА
+# ============================================================
+
+STOP_WORDS = {
+    'english': set(stopwords.words('english')),
+    'russian': set(stopwords.words('russian')) if 'russian' in stopwords.fileids() else set(),
+}
+
+RUSSIAN_STOP_WORDS = {
+    'и', 'в', 'не', 'на', 'я', 'он', 'что', 'с', 'а', 'к', 'но', 'по', 'о', 'у', 'из', 'за', 'так', 'же', 'бы', 'его', 'её',
+    'ее', 'мы', 'вы', 'они', 'оно', 'она', 'это', 'этот', 'эта', 'эти', 'том', 'также', 'чтобы', 'для', 'без', 'до', 'при'
+}
+
+CHINESE_STOP_WORDS = {
+    '的', '了', '在', '是', '我', '你', '他', '她', '它', '我们', '你们', '他们', '她们', '它们',
+    '这', '那', '这些', '那些', '这里', '那里', '哪', '这', '那', '有', '和', '与', '或', 
+    '但', '而', '却', '就', '还', '也', '都', '不', '没', '有', '会', '能', '可以', '要',
+    '把', '被', '给', '让', '叫', '使', '对', '从', '到', '上', '下', '里', '外', '中', '前', '后',
+    '左', '右', '东', '西', '南', '北', '来', '去', '说', '做', '看', '吃', '喝', '走', '跑',
+    '儿', '着', '过', '地', '得', '为', '所', '而', '且', '也', '之', '乎', '者', '也',
+    '与', '其', '或', '并', '及', '如', '若', '虽', '然', '则', '乃', '于', '焉', '哉',
+    '呢', '吗', '吧', '啊', '呀', '哦', '嗯', '呵', '哈', '嘿', '哎', '喂', '哦', '嗯'
+}
+
+# ============================================================
+# ТЕКСТОВАЯ ОБРАБОТКА
+# ============================================================
+
+def remove_pinyin(text):
+    """
+    Удаляет пиньинь в скобках и латинские буквы из текста
+    """
+    # Удаляем пиньинь в скобках: (guǎn), (shēngqì), (gāngqín) и т.д.
+    text = re.sub(r'\([a-zāīūōǖáíúóǘǎǐǔǒǚàìùòǜ\s]+\)', '', text)
+    
+    # Удаляем отдельные латинские буквы и их последовательности
+    text = re.sub(r'[a-zA-Zāīūōǖáíúóǘǎǐǔǒǚàìùòǜ]+', '', text)
+    
+    # Удаляем символы + и -
+    text = re.sub(r'[+\-]', '', text)
+    
+    # Удаляем лишние пробелы
+    text = re.sub(r'\s+', ' ', text)
+    
+    return text.strip()
+
+def clean_text(text, language='chinese'):
+    """
+    Очистка текста от знаков препинания и лишних символов
+    """
+    if language == 'chinese':
+        # Сначала удаляем пиньинь
+        text = remove_pinyin(text)
+        
+        # Удаляем знаки препинания, но оставляем китайские иероглифы и цифры (для возраста)
+        text = re.sub(r'[^\u4e00-\u9fff\d\s]', ' ', text)
+    else:
+        # Для других языков
+        text = re.sub(r'[^\w\s]', ' ', text)
+    
+    # Удаляем лишние пробелы
+    text = re.sub(r'\s+', ' ', text)
+    return text.strip()
+
+def tokenize_chinese(text):
+    """
+    Сегментация китайского текста на слова с помощью jieba
+    """
+    if not JIEBA_AVAILABLE:
+        return []
+    
+    # Используем jieba для сегментации
+    words = jieba.lcut(text)
+    
+    # Фильтруем
+    filtered_words = []
+    for word in words:
+        # Пропускаем пустые строки
+        if not word or word.strip() == '':
+            continue
+        
+        # Пропускаем отдельные служебные частицы (не слова)
+        if word in CHINESE_STOP_WORDS:
+            continue
+        
+        # Пропускаем цифры (возраст и числа)
+        if word.isdigit():
+            continue
+        
+        # Пропускаем одиночные знаки препинания
+        if len(word) == 1 and not '\u4e00' <= word <= '\u9fff':
+            continue
+        
+        filtered_words.append(word)
+    
+    return filtered_words
+
+def tokenize_english(text):
+    try:
+        tokens = word_tokenize(text.lower())
+        stop_words = STOP_WORDS.get('english', set())
+        tokens = [t for t in tokens if t not in stop_words and len(t) > 2 and t.isalpha()]
+        return tokens
+    except:
+        return [w for w in text.lower().split() if len(w) > 2 and w.isalpha()]
+
+def tokenize_russian(text):
+    try:
+        morph = pymorphy2.MorphAnalyzer()
+        tokens = word_tokenize(text.lower())
+        stop_words = STOP_WORDS.get('russian', RUSSIAN_STOP_WORDS)
+        result = []
+        for token in tokens:
+            if token not in stop_words and len(token) > 2 and token.isalpha():
+                lemma = morph.parse(token)[0].normal_form
+                if lemma not in result:
+                    result.append(lemma)
+        return result
+    except Exception as e:
+        print(f"Ошибка токенизации русского: {e}")
+        return [w for w in text.lower().split() if len(w) > 2 and w.isalpha()]
+
+def get_translation(text, source_lang='auto', target_lang='ru'):
+    try:
+        translator = GoogleTranslator(source=source_lang, target=target_lang)
+        translation = translator.translate(text)
+        return translation
+    except Exception as e:
+        print(f"Ошибка перевода: {e}")
+        return ''
+
+def process_ocr_text(text, language='chinese'):
+    """
+    Основная функция обработки распознанного текста
+    """
+    # Очистка текста
+    cleaned = clean_text(text, language)
+    
+    print(f"📝 Очищенный текст: {cleaned[:200]}...")
+    
+    if language == 'chinese':
+        # Для китайского - токенизация на слова
+        tokens = tokenize_chinese(cleaned)
+    elif language == 'english':
+        tokens = tokenize_english(cleaned)
+    else:
+        tokens = tokenize_russian(cleaned)
+    
+    print(f"🔤 Токены: {tokens[:20]}...")
+    
+    # Удаление дубликатов с сохранением порядка
+    seen = set()
+    unique_tokens = []
+    for token in tokens:
+        if token not in seen:
+            seen.add(token)
+            unique_tokens.append(token)
+    
+    # Формирование результата
+    result = []
+    for token in unique_tokens[:50]:
+        # Пропускаем пустые токены
+        if not token or token.strip() == '':
+            continue
+        
+        item = {'word': token}
+        if language == 'chinese':
+            item['translation'] = get_pinyin(token)
+        else:
+            item['translation'] = ''
+        result.append(item)
+    
+    return result
+
+# ============================================================
+# OLLAMA OCR
 # ============================================================
 
 def log_ollama_response(image_path, language, prompt, response_text, elapsed, error=None):
@@ -160,9 +369,9 @@ def extract_text_with_ollama(image_path, language='chinese'):
                 'images': [img_b64],
                 'stream': False,
                 'temperature': 0.1,
-                'num_predict': 300
+                'num_predict': 1000
             },
-            timeout=90
+            timeout=60
         )
         
         elapsed = time.time() - start
@@ -173,42 +382,28 @@ def extract_text_with_ollama(image_path, language='chinese'):
             return [], error_msg
         
         result = response.json()
-        text = result.get('response', '')
+        raw_text = result.get('response', '')
         
-        log_ollama_response(image_path, language, prompt, text, elapsed)
-        print(f"📝 Ответ модели: {text[:300]}")
+        log_ollama_response(image_path, language, prompt, raw_text, elapsed)
+        print(f"📝 Распознанный текст: {raw_text[:300]}")
         
-        words = []
-        seen = set()
+        if language == 'chinese' and not re.search(r'[\u4e00-\u9fff]', raw_text):
+            return [], "На изображении не найдены китайские иероглифы"
+        elif language == 'english' and not re.search(r'[a-zA-Z]', raw_text):
+            return [], "На изображении не найдены английские слова"
+        elif language == 'russian' and not re.search(r'[а-яА-ЯёЁ]', raw_text):
+            return [], "На изображении не найдены русские слова"
         
-        for line in text.strip().split('\n'):
-            line = line.strip()
-            line = re.sub(r'^[\d\.\-\*•\[\]\(\)]+', '', line).strip()
-            
-            if not line:
-                continue
-            
-            if language == 'chinese':
-                clean = ''.join([c for c in line if '\u4e00' <= c <= '\u9fff'])
-                if clean and clean not in seen and len(clean) <= 6:
-                    seen.add(clean)
-                    words.append({'word': clean, 'translation': get_pinyin(clean)})
-            elif language == 'english':
-                clean = re.sub(r'[^a-zA-Z\']', '', line).strip().lower()
-                if clean and len(clean) >= 2 and len(clean) <= 20 and clean not in seen:
-                    seen.add(clean)
-                    words.append({'word': clean, 'translation': ''})
-            else:
-                clean = re.sub(r'[^а-яА-ЯёЁ\-]', '', line).strip().lower()
-                if clean and len(clean) >= 2 and len(clean) <= 20 and clean not in seen:
-                    seen.add(clean)
-                    words.append({'word': clean, 'translation': ''})
+        words = process_ocr_text(raw_text, language)
+        
+        if not words:
+            return [], lang_config['words_not_found']
         
         return words[:30], None
         
     except requests.exceptions.Timeout:
-        error_msg = "Таймаут 90 секунд"
-        log_ollama_response(image_path, language, prompt, '', 90, error_msg)
+        error_msg = "Таймаут 60 секунд"
+        log_ollama_response(image_path, language, prompt, '', 60, error_msg)
         return [], error_msg
     except Exception as e:
         error_msg = str(e)
@@ -271,6 +466,16 @@ def clear_deck(language):
     save_deck([], language)
     return jsonify({'status': 'cleared'})
 
+@app.route('/api/translate', methods=['POST'])
+def translate():
+    data = request.json
+    text = data.get('text', '')
+    source = data.get('source', 'auto')
+    target = data.get('target', 'ru')
+    
+    translation = get_translation(text, source, target)
+    return jsonify({'translation': translation})
+
 @app.route('/api/ocr', methods=['POST'])
 def ocr():
     if 'image' not in request.files:
@@ -317,12 +522,11 @@ if __name__ == '__main__':
     print("=" * 60)
     print("📱 http://localhost:5000")
     print(f"🤖 Ollama: {'✅ Доступен' if check_ollama() else '❌ Не доступен'}")
+    print(f"📚 jieba: {'✅ Доступна' if JIEBA_AVAILABLE else '❌ Не установлена'}")
     if check_ollama():
         print(f"📦 Модель: {get_ollama_model()}")
-    else:
-        print("\n⚠️ Для распознавания установите Ollama и модель:")
-        print("   https://ollama.com/download")
-        print("   ollama pull qwen3.5:4b")
-        print("   ollama serve")
+    if not JIEBA_AVAILABLE:
+        print("\n⚠️ Для правильной сегментации китайского установите jieba:")
+        print("   pip install jieba")
     print("=" * 60)
     app.run(debug=True)
