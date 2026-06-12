@@ -1,1 +1,27 @@
-[]
+[
+  {
+    "word": "shopping",
+    "translation": "шопинг",
+    "timestamp": 0
+  },
+  {
+    "word": "dinner",
+    "translation": "ужин",
+    "timestamp": 1
+  },
+  {
+    "word": "three",
+    "translation": "три",
+    "timestamp": 2
+  },
+  {
+    "word": "home",
+    "translation": "дом",
+    "timestamp": 3
+  },
+  {
+    "word": "mother",
+    "translation": "мать",
+    "timestamp": 4
+  }
+]

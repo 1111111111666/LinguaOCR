@@ -25,10 +25,8 @@ const languageConfig = {
 
 let currentLanguage = 'chinese';
 let currentDeck = [];
-let reviewCards = [];
-let currentCardIndex = 0;
-let isReviewActive = false;
 
+// Данные для каждой вкладки языка
 let manualAddedWordsByLang = {
     chinese: [],
     english: [],
@@ -53,6 +51,18 @@ let processingStatusByLang = {
     russian: false
 };
 
+// Переменные для повторения
+let reviewCards = [];
+let currentCardIndex = 0;
+let isReviewActive = false;
+let reviewStats = {
+    total: 0,
+    correct: 0,
+    incorrect: 0
+};
+let reviewMode = false; // false: слово→перевод, true: перевод→слово
+
+// Показать уведомление
 function showToast(message, isError = false) {
     const toast = document.getElementById('toast');
     toast.textContent = message;
@@ -68,18 +78,8 @@ function getLanguageName(lang) {
     const names = { chinese: 'китайского', english: 'английского', russian: 'русского' };
     return names[lang] || lang;
 }
-
-function updateLanguageUI() {
-    const config = languageConfig[currentLanguage];
-    const manualInput = document.getElementById('manualWord');
-    if (manualInput) manualInput.placeholder = config.placeholder;
-    const resultsTitle = document.getElementById('resultsTitle');
-    if (resultsTitle) resultsTitle.textContent = config.wordsLabel;
-    
-    updateTempAddedDisplay();
-    updateOCRDisplayForCurrentLanguage();
-}
-
+ 
+// Обновление отображения OCR для текущего языка
 async function updateOCRDisplayForCurrentLanguage() {
     const resultsSection = document.getElementById('resultsSection');
     const wordsGrid = document.getElementById('wordsGrid');
@@ -109,6 +109,7 @@ async function updateOCRDisplayForCurrentLanguage() {
     }
 }
 
+// Переключение языка
 document.querySelectorAll('.lang-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
         document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
@@ -124,6 +125,7 @@ document.querySelectorAll('.lang-btn').forEach(btn => {
     });
 });
 
+// Переключение вкладок
 function showTab(tabId) {
     document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
     document.getElementById(`${tabId}-tab`).classList.add('active');
@@ -139,6 +141,7 @@ function showTab(tabId) {
     if (tabId === 'upload') updateOCRDisplayForCurrentLanguage();
 }
 
+// Загрузка колоды для текущего языка
 async function loadDeck() {
     try {
         const response = await fetch(`/api/deck/${currentLanguage}`);
@@ -185,6 +188,7 @@ async function clearDeck() {
     }
 }
 
+// Показываем превью и сохраняем для текущего языка
 function showPreviewForLanguage(imageBase64, language) {
     previewsByLang[language] = imageBase64;
     
@@ -221,6 +225,7 @@ function clearPreview() {
     clearPreviewForLanguage(currentLanguage);
 }
 
+// Глобальный обработчик Ctrl+V
 document.addEventListener('paste', async (e) => {
     const activeTab = document.querySelector('.tab-content.active')?.id;
     if (activeTab !== 'upload-tab') return;
@@ -239,6 +244,7 @@ document.addEventListener('paste', async (e) => {
     }
 });
 
+// Drag & Drop и загрузка
 const dropZone = document.getElementById('dropZone');
 const fileInput = document.getElementById('fileInput');
 
@@ -261,6 +267,7 @@ if (fileInput) {
     fileInput.addEventListener('change', async (e) => { if (e.target.files[0]) await processImage(e.target.files[0]); });
 }
 
+// Кнопка буфера обмена
 const clipboardBtn = document.getElementById('clipboardBtn');
 if (clipboardBtn) {
     clipboardBtn.addEventListener('click', async (e) => {
@@ -465,7 +472,30 @@ function updateTempAddedDisplay() {
     `).join('');
 }
 
-// Повторение с переворотом карточки
+// Переключение режима повторения
+function toggleReviewMode() {
+    reviewMode = document.getElementById('modeToggle').checked;
+    if (isReviewActive) {
+        showCurrentCard();
+    }
+}
+
+// Обновление статистики повторения
+function updateReviewStats() {
+    const remaining = reviewCards.length - currentCardIndex;
+    const statsElement = document.getElementById('reviewStats');
+    if (statsElement) {
+        statsElement.innerHTML = `✅ ${reviewStats.correct} / ❌ ${reviewStats.incorrect} | 📋 осталось: ${remaining}`;
+    }
+    
+    const progressBar = document.getElementById('progressBar');
+    if (progressBar && reviewCards.length > 0) {
+        const progress = (currentCardIndex / reviewCards.length) * 100;
+        progressBar.style.width = `${progress}%`;
+    }
+}
+
+// Начать повторение
 function startReview() {
     if (currentDeck.length === 0) {
         document.getElementById('noCardsMsg').style.display = 'block';
@@ -473,6 +503,13 @@ function startReview() {
         document.getElementById('reviewContainer').style.display = 'flex';
         return;
     }
+    
+    reviewStats = {
+        total: currentDeck.length,
+        correct: 0,
+        incorrect: 0
+    };
+    
     reviewCards = [...currentDeck];
     for (let i = reviewCards.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -480,29 +517,47 @@ function startReview() {
     }
     currentCardIndex = 0;
     isReviewActive = true;
+    
     document.getElementById('noCardsMsg').style.display = 'none';
     document.getElementById('reviewCard').style.display = 'block';
     document.getElementById('reviewContainer').style.display = 'none';
+    
+    updateReviewStats();
     showCurrentCard();
 }
 
+// Показать текущую карточку (с учётом режима)
 function showCurrentCard() {
     if (!isReviewActive) return;
+    
     if (currentCardIndex >= reviewCards.length) {
-        showToast('🎉 Поздравляю! Вы повторили все слова!');
+        // Правильный расчёт точности
+        const totalAnswered = reviewStats.correct + reviewStats.incorrect;
+        const accuracy = totalAnswered > 0 ? Math.round((reviewStats.correct / totalAnswered) * 100) : 0;
+        showToast(`🎉 Поздравляю! Вы повторили все слова! Точность: ${accuracy}%`);
         isReviewActive = false;
         document.getElementById('reviewCard').style.display = 'none';
         document.getElementById('reviewContainer').style.display = 'flex';
         return;
     }
+    
     const card = reviewCards[currentCardIndex];
-    document.getElementById('reviewWord').textContent = card.word;
-    document.getElementById('reviewTranslation').textContent = card.translation || '';
+    
+    if (!reviewMode) {
+        document.getElementById('reviewWord').textContent = card.word;
+        document.getElementById('reviewTranslation').textContent = card.translation || '';
+    } else {
+        document.getElementById('reviewWord').textContent = card.translation || card.word;
+        document.getElementById('reviewTranslation').textContent = card.word;
+    }
+    
     document.getElementById('reviewTranslation').style.display = 'none';
-    // Показываем переднюю сторону
     document.querySelector('.review-card').style.cursor = 'pointer';
+    
+    updateReviewStats();
 }
 
+// Переворот карточки
 function flipCard() {
     const translation = document.getElementById('reviewTranslation');
     if (translation.style.display === 'none') {
@@ -512,38 +567,146 @@ function flipCard() {
     }
 }
 
+// Следующая карточка
 function nextCard(result) {
     if (!isReviewActive) return;
+    
     if (result === 'again') {
+        reviewStats.incorrect++;
         reviewCards.push(reviewCards[currentCardIndex]);
+    } else {
+        reviewStats.correct++;
     }
+    
     currentCardIndex++;
+    updateReviewStats();
     showCurrentCard();
 }
 
-// Привязываем клик по карточке к перевороту
-document.getElementById('reviewWord')?.addEventListener('click', flipCard);
-document.getElementById('reviewTranslation')?.addEventListener('click', flipCard);
-
+// Импорт Anki (полностью переписан)
 async function importAnki() {
-    const text = document.getElementById('importText').value;
+    const textarea = document.getElementById('importText');
+    const text = textarea.value;
     const lines = text.split('\n');
+    
+    // Проверяем язык импортируемых слов
+    const targetLanguage = currentLanguage;
     let imported = 0;
+    let skipped = 0;
+    let warning = '';
+    
     for (const line of lines) {
-        let [word, translation] = line.split(';');
-        word = word?.trim();
-        translation = translation?.trim() || '';
-        if (word) {
-            const added = await addToDeck(word, translation);
-            if (added) imported++;
+        if (!line.trim()) continue;
+        
+        let word = '';
+        let translation = '';
+        
+        if (line.includes(';')) {
+            const parts = line.split(';');
+            word = parts[0]?.trim();
+            translation = parts[1]?.trim() || '';
+        } else {
+            word = line.trim();
         }
+        
+        if (!word) continue;
+        
+        // Проверка на соответствие языка
+        let isValid = true;
+        
+        if (targetLanguage === 'chinese') {
+            // Должны быть китайские иероглифы
+            if (!/[\u4e00-\u9fff]/.test(word)) {
+                isValid = false;
+                warning = 'Импортируйте только китайские иероглифы.';
+            }
+        } else if (targetLanguage === 'english') {
+            // Должны быть английские буквы
+            if (!/^[a-zA-Z\s\-']+$/.test(word.replace(/[^a-zA-Z\s\-']/g, ''))) {
+                isValid = false;
+                warning = 'Импортируйте только английские слова.';
+            }
+        } else if (targetLanguage === 'russian') {
+            // Должны быть русские буквы
+            if (!/^[а-яА-ЯёЁ\s\-]+$/.test(word.replace(/[^а-яА-ЯёЁ\s\-]/g, ''))) {
+                isValid = false;
+                warning = 'Импортируйте только русские слова.';
+            }
+        }
+        
+        if (!isValid) {
+            skipped++;
+            continue;
+        }
+        
+        const added = await addToDeck(word, translation);
+        if (added) imported++;
     }
-    showToast(`Импортировано ${imported} слов`);
+    
+    // Очищаем текстовое поле
+    textarea.value = '';
+    
+    // Показываем результат
+    if (warning && skipped > 0) {
+        showToast(`⚠️ ${warning} Импортировано ${imported} слов, пропущено ${skipped}.`, true);
+    } else if (imported > 0) {
+        showToast(`✅ Импортировано ${imported} слов`);
+    } else {
+        showToast(`⚠️ Не найдено подходящих слов для импорта`, true);
+    }
+    
     await loadDeck();
     
     if (ocrResultsByLang[currentLanguage]) {
         await displayResults(ocrResultsByLang[currentLanguage].words);
     }
+}
+// Функция для обновления плейсхолдера импорта при смене языка
+function updateImportPlaceholder() {
+    const textarea = document.getElementById('importText');
+    if (!textarea) return;
+    
+    if (currentLanguage === 'chinese') {
+        textarea.placeholder = '你;ni3 - перевод\n好;hao3 - перевод\n谢谢;xie4xie - перевод';
+    } else if (currentLanguage === 'english') {
+        textarea.placeholder = 'hello;привет\nworld;мир\nlanguage;язык';
+    } else if (currentLanguage === 'russian') {
+        textarea.placeholder = 'привет;hello\nмир;world\nязык;language';
+    }
+}
+
+// Добавляем очистку поля при переключении на вкладку импорта
+function showTab(tabId) {
+    document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+    document.getElementById(`${tabId}-tab`).classList.add('active');
+    
+    if (tabId !== 'review' && isReviewActive) {
+        isReviewActive = false;
+        document.getElementById('reviewCard').style.display = 'none';
+        document.getElementById('reviewContainer').style.display = 'flex';
+    }
+    
+    if (tabId === 'deck') loadDeck();
+    if (tabId === 'manual') updateTempAddedDisplay();
+    if (tabId === 'upload') updateOCRDisplayForCurrentLanguage();
+    if (tabId === 'import') {
+        // Очищаем поле при открытии вкладки импорта
+        const textarea = document.getElementById('importText');
+        if (textarea) textarea.value = '';
+    }
+}
+
+// Обновляем updateLanguageUI, чтобы менять плейсхолдер импорта
+function updateLanguageUI() {
+    const config = languageConfig[currentLanguage];
+    const manualInput = document.getElementById('manualWord');
+    if (manualInput) manualInput.placeholder = config.placeholder;
+    const resultsTitle = document.getElementById('resultsTitle');
+    if (resultsTitle) resultsTitle.textContent = config.wordsLabel;
+    
+    updateTempAddedDisplay();
+    updateOCRDisplayForCurrentLanguage();
+    updateImportPlaceholder(); // Добавляем обновление плейсхолдера импорта
 }
 
 function escapeHtml(str) {
@@ -551,5 +714,16 @@ function escapeHtml(str) {
     return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m] || m));
 }
 
+// Привязываем клик по карточке к перевороту
+function bindReviewEvents() {
+    const reviewWord = document.getElementById('reviewWord');
+    const reviewTranslation = document.getElementById('reviewTranslation');
+    if (reviewWord) reviewWord.addEventListener('click', flipCard);
+    if (reviewTranslation) reviewTranslation.addEventListener('click', flipCard);
+}
+
+// Инициализация
+updateImportPlaceholder();
 updateLanguageUI();
 loadDeck();
+bindReviewEvents();

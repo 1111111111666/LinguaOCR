@@ -1,1 +1,17 @@
-[]
+[
+  {
+    "word": "你",
+    "translation": "ni3 - ты",
+    "timestamp": 0
+  },
+  {
+    "word": "好",
+    "translation": "hao3 - хорошо",
+    "timestamp": 1
+  },
+  {
+    "word": "谢谢",
+    "translation": "xie4xie - спс",
+    "timestamp": 2
+  }
+]

@@ -530,3 +530,141 @@ body {
         font-size: 13px;
     }
 }
+/* ============================================================
+   УЛУЧШЕННОЕ ПОВТОРЕНИЕ
+   ============================================================ */
+
+.review-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 32px;
+    flex-wrap: wrap;
+    gap: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #eaeaea;
+}
+
+.review-stats {
+    font-size: 14px;
+    font-weight: 500;
+    color: #1a1a1a;
+    background: #f5f5f5;
+    padding: 8px 16px;
+    border-radius: 40px;
+}
+
+.review-mode-toggle {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.mode-label {
+    font-size: 13px;
+    color: #888;
+}
+
+/* Переключатель (toggle switch) */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 52px;
+    height: 28px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #e0e0e0;
+    transition: 0.3s;
+    border-radius: 28px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 22px;
+    width: 22px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: 0.3s;
+    border-radius: 50%;
+}
+
+input:checked + .slider {
+    background-color: #1a1a1a;
+}
+
+input:checked + .slider:before {
+    transform: translateX(24px);
+}
+
+/* Прогресс-бар */
+.review-progress {
+    background: #f0f0f0;
+    border-radius: 20px;
+    height: 6px;
+    margin-bottom: 32px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    background: #1a1a1a;
+    height: 100%;
+    width: 0%;
+    transition: width 0.3s ease;
+    border-radius: 20px;
+}
+
+/* Адаптация для мобильных */
+@media (max-width: 768px) {
+    .review-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .mode-label {
+        font-size: 12px;
+    }
+}
+/* Импорт */
+.import-section textarea {
+    width: 100%;
+    padding: 16px;
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    font-family: monospace;
+    margin-bottom: 16px;
+    resize: vertical;
+}
+
+.import-hint {
+    font-size: 13px;
+    color: #888;
+    margin-bottom: 12px;
+}
+
+.import-btn {
+    padding: 12px 24px;
+    background: #1a1a1a;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+}
+
+.import-btn:hover {
+    background: #333;
+}

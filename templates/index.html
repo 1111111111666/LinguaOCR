@@ -82,30 +82,47 @@
             <div id="deckGrid" class="deck-grid"></div>
         </div>
 
-        <!-- Вкладка повторения -->
-        <div id="review-tab" class="tab-content">
-            <div id="reviewContainer" class="review-container">
-                <button class="start-review-btn" onclick="startReview()">🎴 Начать повторение</button>
-            </div>
-            <div id="reviewCard" class="review-card" style="display: none;">
-                <div class="review-word" id="reviewWord"></div>
-                <div class="review-translation" id="reviewTranslation"></div>
-                <div class="review-buttons">
-                    <button class="review-btn again-btn" onclick="nextCard('again')">😫 Забыл</button>
-                    <button class="review-btn good-btn" onclick="nextCard('good')">👍 Знаю</button>
-                </div>
-            </div>
-            <div id="noCardsMsg" class="no-cards-msg" style="display: none;">📭 Нет слов. Добавьте слова через OCR или ручной ввод</div>
+       <!-- Вкладка повторения -->
+<div id="review-tab" class="tab-content">
+    <div class="review-header">
+        <div class="review-stats" id="reviewStats">
+            <span>📊 0 / 0</span>
         </div>
-
-        <!-- Вкладка импорта -->
-        <div id="import-tab" class="tab-content">
-            <div class="import-section">
-                <textarea id="importText" rows="6" placeholder="你;ni3&#10;好;hao3&#10;谢谢;xie4xie"></textarea>
-                <button class="import-btn" onclick="importAnki()">📥 Импортировать</button>
-            </div>
+        <div class="review-mode-toggle">
+            <span class="mode-label">Слово → Перевод</span>
+            <label class="switch">
+                <input type="checkbox" id="modeToggle" onchange="toggleReviewMode()">
+                <span class="slider round"></span>
+            </label>
+            <span class="mode-label">Перевод → Слово</span>
         </div>
-
+    </div>
+    
+    <div id="reviewContainer" class="review-container">
+        <button class="start-review-btn" onclick="startReview()">🎴 Начать повторение</button>
+    </div>
+    
+    <div id="reviewCard" class="review-card" style="display: none;">
+        <div class="review-progress">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+        <div class="review-word" id="reviewWord"></div>
+        <div class="review-translation" id="reviewTranslation"></div>
+        <div class="review-buttons">
+            <button class="review-btn again-btn" onclick="nextCard('again')">😫 Забыл</button>
+            <button class="review-btn good-btn" onclick="nextCard('good')">👍 Знаю</button>
+        </div>
+    </div>
+    <div id="noCardsMsg" class="no-cards-msg" style="display: none;">📭 Нет слов. Добавьте слова через OCR или ручной ввод</div>
+</div>
+       <!-- Вкладка импорта -->
+<div id="import-tab" class="tab-content">
+    <div class="import-section">
+        <p class="import-hint">Формат: слово;перевод (каждая строка)</p>
+        <textarea id="importText" rows="6" placeholder="你;ni3 - перевод&#10;好;hao3 - перевод&#10;谢谢;xie4xie - перевод"></textarea>
+        <button class="import-btn" onclick="importAnki()">📥 Импортировать</button>
+    </div>
+</div>
 <!-- Вкладка Q&A -->
 <div id="qa-tab" class="tab-content">
     <div class="qa-grid">
