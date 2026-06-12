@@ -21,19 +21,18 @@ from deep_translator import GoogleTranslator
 try:
     import jieba
     JIEBA_AVAILABLE = True
-    print("✅ jieba загружена для сегментации китайского текста")
 except ImportError:
     JIEBA_AVAILABLE = False
-    print("⚠️ jieba не установлена. Установите: pip install jieba")
+    print("jieba не установлена. Установите: pip install jieba")
 
 # Инициализация NLTK
 try:
     nltk.data.find('tokenizers/punkt')
 except LookupError:
-    nltk.download('punkt')
-    nltk.download('punkt_tab')
-    nltk.download('stopwords')
-    nltk.download('averaged_perceptron_tagger')
+    nltk.download('punkt', quiet=True)
+    nltk.download('punkt_tab', quiet=True)
+    nltk.download('stopwords', quiet=True)
+    nltk.download('averaged_perceptron_tagger', quiet=True)
 
 app = Flask(__name__)
 app.secret_key = 'your-secret-key-change-this'
@@ -90,7 +89,6 @@ LANGUAGES = {
 # ============================================================
 # РАБОТА С КОЛОДОЙ
 # ============================================================
-
 def get_deck_file(language='chinese'):
     lang_config = LANGUAGES.get(language, LANGUAGES['chinese'])
     return lang_config['file']
@@ -125,37 +123,33 @@ def get_pinyin(word):
         return ' '.join([r[0] for r in result if r])
     except:
         return ''
-    
+
 def get_translation_for_word(word, source_lang='zh-CN', target_lang='ru'):
-    """
-    Получить перевод слова с помощью Google Translate
-    """
     if not word:
         return ''
     try:
         translator = GoogleTranslator(source=source_lang, target=target_lang)
-        translation = translator.translate(word)
-        return translation
+        return translator.translate(word)
     except Exception as e:
-        print(f"Ошибка перевода слова '{word}': {e}")
         return ''
+
 # ============================================================
 # ТЕКСТОВАЯ ОБРАБОТКА
 # ============================================================
-
 STOP_WORDS = {
     'english': set(stopwords.words('english')),
     'russian': set(stopwords.words('russian')) if 'russian' in stopwords.fileids() else set(),
 }
 
 RUSSIAN_STOP_WORDS = {
-    'и', 'в', 'не', 'на', 'я', 'он', 'что', 'с', 'а', 'к', 'но', 'по', 'о', 'у', 'из', 'за', 'так', 'же', 'бы', 'его', 'её',
-    'ее', 'мы', 'вы', 'они', 'оно', 'она', 'это', 'этот', 'эта', 'эти', 'том', 'также', 'чтобы', 'для', 'без', 'до', 'при'
+    'и', 'в', 'не', 'на', 'я', 'он', 'что', 'с', 'а', 'к', 'но', 'по', 'о', 'у', 'из', 'за',
+    'так', 'же', 'бы', 'его', 'её', 'ее', 'мы', 'вы', 'они', 'оно', 'она', 'это', 'этот',
+    'эта', 'эти', 'том', 'также', 'чтобы', 'для', 'без', 'до', 'при'
 }
 
 CHINESE_STOP_WORDS = {
     '的', '了', '在', '是', '我', '你', '他', '她', '它', '我们', '你们', '他们', '她们', '它们',
-    '这', '那', '这些', '那些', '这里', '那里', '哪', '这', '那', '有', '和', '与', '或', 
+    '这', '那', '这些', '那些', '这里', '那里', '哪', '这', '那', '有', '和', '与', '或',
     '但', '而', '却', '就', '还', '也', '都', '不', '没', '有', '会', '能', '可以', '要',
     '把', '被', '给', '让', '叫', '使', '对', '从', '到', '上', '下', '里', '外', '中', '前', '后',
     '左', '右', '东', '西', '南', '北', '来', '去', '说', '做', '看', '吃', '喝', '走', '跑',
@@ -164,85 +158,44 @@ CHINESE_STOP_WORDS = {
     '呢', '吗', '吧', '啊', '呀', '哦', '嗯', '呵', '哈', '嘿', '哎', '喂', '哦', '嗯'
 }
 
-# ============================================================
-# ТЕКСТОВАЯ ОБРАБОТКА
-# ============================================================
-
 def remove_pinyin(text):
-    """
-    Удаляет пиньинь в скобках и латинские буквы из текста
-    """
-    # Удаляем пиньинь в скобках: (guǎn), (shēngqì), (gāngqín) и т.д.
     text = re.sub(r'\([a-zāīūōǖáíúóǘǎǐǔǒǚàìùòǜ\s]+\)', '', text)
-    
-    # Удаляем отдельные латинские буквы и их последовательности
     text = re.sub(r'[a-zA-Zāīūōǖáíúóǘǎǐǔǒǚàìùòǜ]+', '', text)
-    
-    # Удаляем символы + и -
     text = re.sub(r'[+\-]', '', text)
-    
-    # Удаляем лишние пробелы
     text = re.sub(r'\s+', ' ', text)
-    
     return text.strip()
 
 def clean_text(text, language='chinese'):
-    """
-    Очистка текста от знаков препинания и лишних символов
-    """
     if language == 'chinese':
-        # Сначала удаляем пиньинь
         text = remove_pinyin(text)
-        
-        # Удаляем знаки препинания, но оставляем китайские иероглифы и цифры (для возраста)
         text = re.sub(r'[^\u4e00-\u9fff\d\s]', ' ', text)
     else:
-        # Для других языков
         text = re.sub(r'[^\w\s]', ' ', text)
-    
-    # Удаляем лишние пробелы
     text = re.sub(r'\s+', ' ', text)
     return text.strip()
 
 def tokenize_chinese(text):
-    """
-    Сегментация китайского текста на слова с помощью jieba
-    """
     if not JIEBA_AVAILABLE:
         return []
-    
-    # Используем jieba для сегментации
     words = jieba.lcut(text)
-    
-    # Фильтруем
     filtered_words = []
     for word in words:
-        # Пропускаем пустые строки
         if not word or word.strip() == '':
             continue
-        
-        # Пропускаем отдельные служебные частицы (не слова)
         if word in CHINESE_STOP_WORDS:
             continue
-        
-        # Пропускаем цифры (возраст и числа)
         if word.isdigit():
             continue
-        
-        # Пропускаем одиночные знаки препинания
         if len(word) == 1 and not '\u4e00' <= word <= '\u9fff':
             continue
-        
         filtered_words.append(word)
-    
     return filtered_words
 
 def tokenize_english(text):
     try:
         tokens = word_tokenize(text.lower())
         stop_words = STOP_WORDS.get('english', set())
-        tokens = [t for t in tokens if t not in stop_words and len(t) > 2 and t.isalpha()]
-        return tokens
+        return [t for t in tokens if t not in stop_words and len(t) > 2 and t.isalpha()]
     except:
         return [w for w in text.lower().split() if len(w) > 2 and w.isalpha()]
 
@@ -258,26 +211,11 @@ def tokenize_russian(text):
                 if lemma not in result:
                     result.append(lemma)
         return result
-    except Exception as e:
-        print(f"Ошибка токенизации русского: {e}")
+    except:
         return [w for w in text.lower().split() if len(w) > 2 and w.isalpha()]
 
-def get_translation(text, source_lang='auto', target_lang='ru'):
-    try:
-        translator = GoogleTranslator(source=source_lang, target=target_lang)
-        translation = translator.translate(text)
-        return translation
-    except Exception as e:
-        print(f"Ошибка перевода: {e}")
-        return ''
-
 def process_ocr_text(text, language='chinese'):
-    """
-    Основная функция обработки распознанного текста
-    """
     cleaned = clean_text(text, language)
-    
-    print(f"📝 Очищенный текст: {cleaned[:200]}...")
     
     if language == 'chinese':
         tokens = tokenize_chinese(cleaned)
@@ -285,8 +223,6 @@ def process_ocr_text(text, language='chinese'):
         tokens = tokenize_english(cleaned)
     else:
         tokens = tokenize_russian(cleaned)
-    
-    print(f"🔤 Токены: {tokens[:20]}...")
     
     seen = set()
     unique_tokens = []
@@ -299,11 +235,8 @@ def process_ocr_text(text, language='chinese'):
     for token in unique_tokens[:50]:
         if not token or token.strip() == '':
             continue
-        
         item = {'word': token}
-        
         if language == 'chinese':
-            # Для китайского: пиньинь + перевод
             pinyin_text = get_pinyin(token)
             translation = get_translation_for_word(token, 'zh-CN', 'ru')
             item['translation'] = f"{pinyin_text} - {translation}" if translation else pinyin_text
@@ -313,35 +246,12 @@ def process_ocr_text(text, language='chinese'):
         else:
             translation = get_translation_for_word(token, 'ru', 'en')
             item['translation'] = translation if translation else ''
-        
         result.append(item)
-    
     return result
 
 # ============================================================
 # OLLAMA OCR
 # ============================================================
-
-def log_ollama_response(image_path, language, prompt, response_text, elapsed, error=None):
-    log_file = 'ollama_debug.log'
-    try:
-        with open(log_file, 'a', encoding='utf-8') as f:
-            f.write(f"\n{'='*80}\n")
-            f.write(f"Время: {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
-            f.write(f"Язык: {language}\n")
-            f.write(f"Изображение: {os.path.basename(image_path)}\n")
-            f.write(f"Время ответа: {elapsed:.1f} сек\n")
-            if error:
-                f.write(f"ОШИБКА: {error}\n")
-            f.write(f"{'-'*40}\n")
-            f.write(f"ПРОМПТ:\n{prompt}\n")
-            f.write(f"{'-'*40}\n")
-            f.write(f"ОТВЕТ МОДЕЛИ:\n{response_text}\n")
-            f.write(f"{'='*80}\n")
-        print(f"📝 Лог сохранён в ollama_debug.log")
-    except Exception as e:
-        print(f"⚠️ Не удалось сохранить лог: {e}")
-
 def check_ollama():
     try:
         response = requests.get('http://localhost:11434/api/tags', timeout=3)
@@ -376,9 +286,6 @@ def extract_text_with_ollama(image_path, language='chinese'):
             img_b64 = base64.b64encode(f.read()).decode()
         
         model = get_ollama_model()
-        print(f"🔄 Использую модель: {model}")
-        start = time.time()
-        
         response = requests.post('http://localhost:11434/api/generate',
             json={
                 'model': model,
@@ -391,18 +298,11 @@ def extract_text_with_ollama(image_path, language='chinese'):
             timeout=60
         )
         
-        elapsed = time.time() - start
-        
         if response.status_code != 200:
-            error_msg = f"HTTP {response.status_code}: {response.text}"
-            log_ollama_response(image_path, language, prompt, '', elapsed, error_msg)
-            return [], error_msg
+            return [], f"HTTP {response.status_code}"
         
         result = response.json()
         raw_text = result.get('response', '')
-        
-        log_ollama_response(image_path, language, prompt, raw_text, elapsed)
-        print(f"📝 Распознанный текст: {raw_text[:300]}")
         
         if language == 'chinese' and not re.search(r'[\u4e00-\u9fff]', raw_text):
             return [], "На изображении не найдены китайские иероглифы"
@@ -419,19 +319,13 @@ def extract_text_with_ollama(image_path, language='chinese'):
         return words[:30], None
         
     except requests.exceptions.Timeout:
-        error_msg = "Таймаут 60 секунд"
-        log_ollama_response(image_path, language, prompt, '', 60, error_msg)
-        return [], error_msg
+        return [], "Таймаут 60 секунд"
     except Exception as e:
-        error_msg = str(e)
-        log_ollama_response(image_path, language, prompt, '', 0, error_msg)
-        traceback.print_exc()
-        return [], error_msg
+        return [], str(e)
 
 # ============================================================
 # FLASK МАРШРУТЫ
 # ============================================================
-
 @app.route('/')
 def index():
     return render_template('index.html', languages=LANGUAGES)
@@ -457,7 +351,6 @@ def add_word(language):
     word = data.get('word')
     translation = data.get('translation', '')
     
-    # Если перевод не передан, получаем его автоматически
     if not translation and language == 'chinese':
         translation = get_translation_for_word(word, 'zh-CN', 'ru')
     elif not translation and language == 'english':
@@ -490,16 +383,6 @@ def delete_word(language, word):
 def clear_deck(language):
     save_deck([], language)
     return jsonify({'status': 'cleared'})
-
-@app.route('/api/translate', methods=['POST'])
-def translate():
-    data = request.json
-    text = data.get('text', '')
-    source = data.get('source', 'auto')
-    target = data.get('target', 'ru')
-    
-    translation = get_translation(text, source, target)
-    return jsonify({'translation': translation})
 
 @app.route('/api/ocr', methods=['POST'])
 def ocr():
@@ -540,7 +423,6 @@ def get_pinyin_route():
     data = request.json
     text = data.get('text', '')
     return jsonify({'pinyin': get_pinyin(text)})
-# Добавьте после остальных маршрутов
 
 @app.route('/privacy')
 def privacy():
@@ -549,17 +431,12 @@ def privacy():
 @app.route('/terms')
 def terms():
     return render_template('terms.html')
+
 if __name__ == '__main__':
-    print("=" * 60)
+    print("=" * 50)
     print("🎴 LINGUA OCR")
-    print("=" * 60)
+    print("=" * 50)
     print("📱 http://localhost:5000")
-    print(f"🤖 Ollama: {'✅ Доступен' if check_ollama() else '❌ Не доступен'}")
-    print(f"📚 jieba: {'✅ Доступна' if JIEBA_AVAILABLE else '❌ Не установлена'}")
-    if check_ollama():
-        print(f"📦 Модель: {get_ollama_model()}")
-    if not JIEBA_AVAILABLE:
-        print("\n⚠️ Для правильной сегментации китайского установите jieba:")
-        print("   pip install jieba")
-    print("=" * 60)
-    app.run(debug=True)
+    print(f"🤖 Ollama: {'✅' if check_ollama() else '❌'}")
+    print("=" * 50)
+    app.run(debug=False, host='0.0.0.0', port=5000)

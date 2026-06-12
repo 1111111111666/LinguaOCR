@@ -148,7 +148,6 @@ async function loadDeck() {
         currentDeck = await response.json();
         updateDeckUI();
     } catch (e) {
-        console.error('Ошибка загрузки колоды:', e);
     }
 }
 
@@ -290,7 +289,6 @@ if (clipboardBtn) {
                 showToast('В буфере обмена нет изображения');
             }
         } catch (err) {
-            console.error('Ошибка буфера:', err);
             showToast('Не удалось получить изображение из буфера обмена');
         }
     });
@@ -386,7 +384,6 @@ async function addToDeck(word, translation) {
         const data = await response.json();
         return data.status === 'added';
     } catch (e) {
-        console.error('Ошибка добавления:', e);
         return false;
     }
 }
@@ -434,7 +431,6 @@ async function addManualWord() {
             const data = await response.json();
             translation = data.pinyin;
         } catch (e) {
-            console.error('Ошибка получения пиньиня:', e);
         }
     }
     

@@ -10,6 +10,7 @@
 <body>
     <div class="toast" id="toast"></div>
 
+    <!-- ===== НАВИГАЦИЯ ===== -->
     <nav class="navbar">
         <div class="nav-container">
             <div class="logo">LinguaOCR</div>
@@ -35,7 +36,7 @@
             <p>Загрузи фото своего конспекта — AI распознает слова и создаст готовые карточки для повторения</p>
         </div>
 
-        <!-- Вкладка OCR -->
+        <!-- ===== ВКЛАДКА OCR ===== -->
         <div id="upload-tab" class="tab-content active">
             <div class="upload-zone" id="dropZone">
                 <div class="upload-content">
@@ -52,18 +53,18 @@
             </div>
             <div id="resultsSection" class="results-section">
                 <div class="results-header">
-                    <span class="results-title" id="resultsTitle">Иероглифы</span>
+                    <span class="results-title" id="resultsTitle">Слова</span>
                     <span class="results-stats" id="resultsStats"></span>
                 </div>
                 <div id="wordsGrid" class="words-grid"></div>
             </div>
         </div>
 
-        <!-- Вкладка ручного ввода -->
+        <!-- ===== ВКЛАДКА РУЧНОГО ВВОДА ===== -->
         <div id="manual-tab" class="tab-content">
             <div class="manual-section">
                 <div class="manual-input-group">
-                    <input type="text" id="manualWord" placeholder="Введите иероглиф или предложение..." autocomplete="off">
+                    <input type="text" id="manualWord" placeholder="Введите слово или предложение..." autocomplete="off">
                     <button class="manual-add-btn" onclick="addManualWord()">➕ Добавить</button>
                 </div>
                 <div class="added-words-section" id="addedWordsSection" style="display: none;">
@@ -73,7 +74,7 @@
             </div>
         </div>
 
-        <!-- Вкладка колоды -->
+        <!-- ===== ВКЛАДКА КОЛОДЫ ===== -->
         <div id="deck-tab" class="tab-content">
             <div class="deck-header">
                 <div class="deck-stats" id="deckStats">0 слов</div>
@@ -82,194 +83,78 @@
             <div id="deckGrid" class="deck-grid"></div>
         </div>
 
-       <!-- Вкладка повторения -->
-<div id="review-tab" class="tab-content">
-    <div class="review-header">
-        <div class="review-stats" id="reviewStats">
-            <span>📊 0 / 0</span>
-        </div>
-        <div class="review-mode-toggle">
-            <span class="mode-label">Слово → Перевод</span>
-            <label class="switch">
-                <input type="checkbox" id="modeToggle" onchange="toggleReviewMode()">
-                <span class="slider round"></span>
-            </label>
-            <span class="mode-label">Перевод → Слово</span>
-        </div>
-    </div>
-    
-    <div id="reviewContainer" class="review-container">
-        <button class="start-review-btn" onclick="startReview()">🎴 Начать повторение</button>
-    </div>
-    
-    <div id="reviewCard" class="review-card" style="display: none;">
-        <div class="review-progress">
-            <div class="progress-bar" id="progressBar"></div>
-        </div>
-        <div class="review-word" id="reviewWord"></div>
-        <div class="review-translation" id="reviewTranslation"></div>
-        <div class="review-buttons">
-            <button class="review-btn again-btn" onclick="nextCard('again')">😫 Забыл</button>
-            <button class="review-btn good-btn" onclick="nextCard('good')">👍 Знаю</button>
-        </div>
-    </div>
-    <div id="noCardsMsg" class="no-cards-msg" style="display: none;">📭 Нет слов. Добавьте слова через OCR или ручной ввод</div>
-</div>
-       <!-- Вкладка импорта -->
-<div id="import-tab" class="tab-content">
-    <div class="import-section">
-        <p class="import-hint">Формат: слово;перевод (каждая строка)</p>
-        <textarea id="importText" rows="6" placeholder="你;ni3 - перевод&#10;好;hao3 - перевод&#10;谢谢;xie4xie - перевод"></textarea>
-        <button class="import-btn" onclick="importAnki()">📥 Импортировать</button>
-    </div>
-</div>
-<!-- Вкладка Q&A -->
-<div id="qa-tab" class="tab-content">
-    <div class="qa-grid">
-        <!-- Вопрос 1 -->
-        <div class="qa-item">
-            <div class="qa-question">
-                <span>Что такое OCR?</span>
-                <button class="qa-toggle" onclick="toggleQA(this)">▼</button>
+        <!-- ===== ВКЛАДКА ПОВТОРЕНИЯ ===== -->
+        <div id="review-tab" class="tab-content">
+            <div class="review-header">
+                <div class="review-stats" id="reviewStats"><span>📊 0 / 0</span></div>
+                <div class="review-mode-toggle">
+                    <span class="mode-label">Слово → Перевод</span>
+                    <label class="switch">
+                        <input type="checkbox" id="modeToggle" onchange="toggleReviewMode()">
+                        <span class="slider round"></span>
+                    </label>
+                    <span class="mode-label">Перевод → Слово</span>
+                </div>
             </div>
-            <div class="qa-answer">
-                OCR (Optical Character Recognition) — это технология распознавания текста на изображениях. Наше приложение использует AI (Ollama + Qwen) для извлечения слов с фотографий ваших конспектов.
+            <div id="reviewContainer" class="review-container">
+                <button class="start-review-btn" onclick="startReview()">🚀 Начать повторение</button>
+            </div>
+            <div id="reviewCard" class="review-card" style="display: none;">
+                <div class="review-progress">
+                    <div class="progress-bar" id="progressBar"></div>
+                </div>
+                <div class="review-word" id="reviewWord"></div>
+                <div class="review-translation" id="reviewTranslation"></div>
+                <div class="review-buttons">
+                    <button class="review-btn again-btn" onclick="nextCard('again')">😫 Забыл</button>
+                    <button class="review-btn good-btn" onclick="nextCard('good')">👍 Знаю</button>
+                </div>
+            </div>
+            <div id="noCardsMsg" class="no-cards-msg" style="display: none;">📭 Нет слов. Добавьте слова через OCR или ручной ввод</div>
+        </div>
+
+        <!-- ===== ВКЛАДКА ИМПОРТА ===== -->
+        <div id="import-tab" class="tab-content">
+            <div class="import-section">
+                <p class="import-hint">Формат: слово;перевод (каждая строка)</p>
+                <textarea id="importText" rows="6" placeholder=""></textarea>
+                <button class="import-btn" onclick="importAnki()">📥 Импортировать</button>
             </div>
         </div>
-        <!-- Вопрос 2 -->
-        <div class="qa-item">
-            <div class="qa-question">
-                <span>Как загрузить изображение?</span>
-                <button class="qa-toggle" onclick="toggleQA(this)">▼</button>
-            </div>
-            <div class="qa-answer">
-                Есть несколько способов:<br>
-                • Нажмите на область загрузки и выберите файл<br>
-                • Перетащите изображение из папки в область загрузки<br>
-                • Скопируйте изображение (Ctrl+C) и нажмите кнопку "Вставить из буфера обмена" или просто нажмите Ctrl+V
+
+        <!-- ===== ВКЛАДКА Q&A ===== -->
+        <div id="qa-tab" class="tab-content">
+            <div class="qa-grid">
+                <div class="qa-item"><div class="qa-question"><span>Что такое OCR?</span><button class="qa-toggle" onclick="toggleQA(this)">▼</button></div><div class="qa-answer">OCR (Optical Character Recognition) — технология распознавания текста на изображениях. Приложение использует AI (Ollama + Qwen) для извлечения слов с фотографий конспектов.</div></div>
+                <div class="qa-item"><div class="qa-question"><span>Как загрузить изображение?</span><button class="qa-toggle" onclick="toggleQA(this)">▼</button></div><div class="qa-answer">Есть несколько способов:<br>• Нажмите на область загрузки и выберите файл<br>• Перетащите изображение из папки<br>• Скопируйте изображение (Ctrl+C) и нажмите Ctrl+V</div></div>
+                <div class="qa-item"><div class="qa-question"><span>Что делать, если не распознаёт текст?</span><button class="qa-toggle" onclick="toggleQA(this)">▼</button></div><div class="qa-answer">• Плохой почерк — используйте ручной ввод<br>• Таймаут — подождите или попробуйте ещё раз<br>• Не тот язык — проверьте выбор языка<br>• Ollama не запущен — запустите ollama serve</div></div>
+                <div class="qa-item"><div class="qa-question"><span>В чём разница между OCR, ручным вводом и импортом?</span><button class="qa-toggle" onclick="toggleQA(this)">▼</button></div><div class="qa-answer">• OCR — автоматическое распознавание слов с фото<br>• Ручной ввод — ввод слов вручную<br>• Импорт — загрузка готовых колод из файлов</div></div>
+                <div class="qa-item"><div class="qa-question"><span>К кому обратиться за поддержкой?</span><button class="qa-toggle" onclick="toggleQA(this)">▼</button></div><div class="qa-answer">Email: <strong>support@linguaocr.local</strong></div></div>
             </div>
         </div>
-        <!-- Вопрос 3 -->
-        <div class="qa-item">
-            <div class="qa-question">
-                <span>Что делать, если не распознаёт текст?</span>
-                <button class="qa-toggle" onclick="toggleQA(this)">▼</button>
-            </div>
-            <div class="qa-answer">
-                Возможные причины и решения:<br>
-                • <strong>Плохой почерк</strong> — AI лучше распознаёт печатный текст. Попробуйте сфотографировать более чётко или используйте ручной ввод.<br>
-                • <strong>Таймаут</strong> — распознавание может занять 10-60 секунд. Подождите или попробуйте ещё раз.<br>
-                • <strong>Не тот язык</strong> — убедитесь, что выбран правильный язык в верхней панели.<br>
-                • <strong>Ollama не запущен</strong> — проверьте, что Ollama работает (ollama serve).
-            </div>
-        </div>
-        <!-- Вопрос 4 -->
-        <div class="qa-item">
-            <div class="qa-question">
-                <span>В чём разница между OCR, ручным вводом и импортом?</span>
-                <button class="qa-toggle" onclick="toggleQA(this)">▼</button>
-            </div>
-            <div class="qa-answer">
-                • <strong>OCR</strong> — автоматическое распознавание слов с фотографии конспекта. Идеально для печатных текстов.<br>
-                • <strong>Ручной ввод</strong> — вы сами вводите слова. Полезно для рукописных заметок, которые AI не распознал.<br>
-                • <strong>Импорт</strong> — загрузка готовых колод из файлов (формат Anki). Удобно, если у вас уже есть список слов.
-            </div>
-        </div>
-        <!-- Вопрос 5 -->
-        <div class="qa-item">
-            <div class="qa-question">
-                <span>К кому обратиться за поддержкой?</span>
-                <button class="qa-toggle" onclick="toggleQA(this)">▼</button>
-            </div>
-            <div class="qa-answer">
-                По всем вопросам поддержки обращайтесь:<br>
-                • Email: <strong>support@linguaocr.local</strong><br>
-            </div>
-        </div>
-    </div>
-</div>
     </main>
 
-   <!-- Футер (исправленный) -->
-<footer class="footer">
-    <div class="footer-content">
-        <div class="footer-section">
-            <h4>LinguaOCR</h4>
-            <p>Превратите свои конспекты в эффективные карточки</p>
+    <!-- ===== ФУТЕР ===== -->
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-section"><h4>LinguaOCR</h4><p>Превратите свои конспекты в эффективные карточки</p></div>
+            <div class="footer-section"><h4>Продукт</h4><p><a onclick="showTab('upload')">OCR</a></p><p><a onclick="showTab('manual')">Ручной ввод</a></p><p><a onclick="showTab('import')">Импорт</a></p></div>
+            <div class="footer-section"><h4>Поддержка</h4><p><a onclick="showTab('qa')">FAQ</a></p></div>
+            <div class="footer-section"><h4>Правовая информация</h4><p><a href="/privacy">Политика конфиденциальности</a></p><p><a href="/terms">Условия использования</a></p></div>
         </div>
-        <div class="footer-section">
-            <h4>Продукт</h4>
-            <p><a onclick="showTab('upload')">OCR</a></p>
-            <p><a onclick="showTab('manual')">Ручной ввод</a></p>
-            <p><a onclick="showTab('import')">Импорт</a></p>
-        </div>
-        <div class="footer-section">
-            <h4>Поддержка</h4>
-            <p><a onclick="showTab('qa')">FAQ</a></p>
-        </div>
-        <div class="footer-section">
-            <h4>Правовая информация</h4>
-            <p><a href="/privacy">Политика конфиденциальности</a></p>
-            <p><a href="/terms">Условия использования</a></p>
-        </div>
-    </div>
-    <div class="copyright">
-        © 2026 LinguaOCR. Все права защищены.
-    </div>
-</footer>
-
-<script src="{{ url_for('static', filename='script.js') }}"></script>
-<script>
-    // Функция для переключения Q&A
-    function toggleQA(btn) {
-        const item = btn.closest('.qa-item');
-        const answer = item.querySelector('.qa-answer');
-        const isOpen = answer.style.display === 'block';
-        
-        // Закрываем все остальные
-        document.querySelectorAll('.qa-answer').forEach(a => a.style.display = 'none');
-        document.querySelectorAll('.qa-toggle').forEach(b => b.textContent = '▼');
-        
-        if (!isOpen) {
-            answer.style.display = 'block';
-            btn.textContent = '▲';
-        }
-    }
-</script>
+        <div class="copyright">© 2026 LinguaOCR. Все права защищены.</div>
+    </footer>
 
     <script src="{{ url_for('static', filename='script.js') }}"></script>
     <script>
-        // Функция для переключения Q&A
         function toggleQA(btn) {
             const item = btn.closest('.qa-item');
             const answer = item.querySelector('.qa-answer');
             const isOpen = answer.style.display === 'block';
-            
-            // Закрываем все остальные
             document.querySelectorAll('.qa-answer').forEach(a => a.style.display = 'none');
             document.querySelectorAll('.qa-toggle').forEach(b => b.textContent = '▼');
-            
-            if (!isOpen) {
-                answer.style.display = 'block';
-                btn.textContent = '▲';
-            }
+            if (!isOpen) { answer.style.display = 'block'; btn.textContent = '▲'; }
         }
-        
-        // Ссылки в футере
-        document.getElementById('privacyLink')?.addEventListener('click', (e) => {
-            e.preventDefault();
-            alert('Политика конфиденциальности: Мы не храним ваши данные. Всё распознавание происходит локально на вашем компьютере через Ollama.');
-        });
-        
-        document.getElementById('termsLink')?.addEventListener('click', (e) => {
-            e.preventDefault();
-            alert('Условия использования: Приложение предоставляется "как есть". Вы можете использовать его для изучения языков бесплатно.');
-        });
-        
-        document.getElementById('supportLink')?.addEventListener('click', (e) => {
-            e.preventDefault();
-            alert('По вопросам поддержки обращайтесь: support@linguaocr.local');
-        });
     </script>
 </body>
 </html>
