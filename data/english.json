@@ -23,5 +23,25 @@
     "word": "mother",
     "translation": "мать",
     "timestamp": 4
+  },
+  {
+    "word": "nine",
+    "translation": "девять",
+    "timestamp": 5
+  },
+  {
+    "word": "family",
+    "translation": "семья",
+    "timestamp": 6
+  },
+  {
+    "word": "parents",
+    "translation": "родители",
+    "timestamp": 7
+  },
+  {
+    "word": "sister",
+    "translation": "сестра",
+    "timestamp": 8
   }
 ]
