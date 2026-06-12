@@ -41,7 +41,7 @@
                 <div class="upload-content">
                     <div class="upload-icon">📸</div>
                     <div class="upload-title">Загрузите фото конспекта</div>
-                    <div class="upload-subtitle">Перетащите файл или нажмите для выбора</div>
+                    <div class="upload-subtitle">Перетащите файл, нажмите для выбора или используйте Ctrl+V</div>
                     <input type="file" id="fileInput" class="file-input" accept="image/*">
                     <button class="clipboard-btn" id="clipboardBtn">📋 Вставить из буфера обмена</button>
                 </div>
@@ -106,26 +106,153 @@
             </div>
         </div>
 
-        <!-- Вкладка Q&A -->
-        <div id="qa-tab" class="tab-content">
-            <div class="qa-grid">
-                <div class="qa-item"><h4>Как это работает?</h4><p>Вы загружаете фото конспекта, AI распознает слова и создает карточки для запоминания.</p></div>
-                <div class="qa-item"><h4>Какие языки поддерживаются?</h4><p>Китайский, английский и русский.</p></div>
-                <div class="qa-item"><h4>Как вставить фото из буфера обмена?</h4><p>Скопируйте изображение (Ctrl+C), затем нажмите кнопку "Вставить из буфера обмена".</p></div>
+<!-- Вкладка Q&A -->
+<div id="qa-tab" class="tab-content">
+    <div class="qa-grid">
+        <!-- Вопрос 1 -->
+        <div class="qa-item">
+            <div class="qa-question">
+                <span>Что такое OCR?</span>
+                <button class="qa-toggle" onclick="toggleQA(this)">▼</button>
+            </div>
+            <div class="qa-answer">
+                OCR (Optical Character Recognition) — это технология распознавания текста на изображениях. Наше приложение использует AI (Ollama + Qwen) для извлечения слов с фотографий ваших конспектов.
             </div>
         </div>
+        <!-- Вопрос 2 -->
+        <div class="qa-item">
+            <div class="qa-question">
+                <span>Как загрузить изображение?</span>
+                <button class="qa-toggle" onclick="toggleQA(this)">▼</button>
+            </div>
+            <div class="qa-answer">
+                Есть несколько способов:<br>
+                • Нажмите на область загрузки и выберите файл<br>
+                • Перетащите изображение из папки в область загрузки<br>
+                • Скопируйте изображение (Ctrl+C) и нажмите кнопку "Вставить из буфера обмена" или просто нажмите Ctrl+V
+            </div>
+        </div>
+        <!-- Вопрос 3 -->
+        <div class="qa-item">
+            <div class="qa-question">
+                <span>Что делать, если не распознаёт текст?</span>
+                <button class="qa-toggle" onclick="toggleQA(this)">▼</button>
+            </div>
+            <div class="qa-answer">
+                Возможные причины и решения:<br>
+                • <strong>Плохой почерк</strong> — AI лучше распознаёт печатный текст. Попробуйте сфотографировать более чётко или используйте ручной ввод.<br>
+                • <strong>Таймаут</strong> — распознавание может занять 10-60 секунд. Подождите или попробуйте ещё раз.<br>
+                • <strong>Не тот язык</strong> — убедитесь, что выбран правильный язык в верхней панели.<br>
+                • <strong>Ollama не запущен</strong> — проверьте, что Ollama работает (ollama serve).
+            </div>
+        </div>
+        <!-- Вопрос 4 -->
+        <div class="qa-item">
+            <div class="qa-question">
+                <span>В чём разница между OCR, ручным вводом и импортом?</span>
+                <button class="qa-toggle" onclick="toggleQA(this)">▼</button>
+            </div>
+            <div class="qa-answer">
+                • <strong>OCR</strong> — автоматическое распознавание слов с фотографии конспекта. Идеально для печатных текстов.<br>
+                • <strong>Ручной ввод</strong> — вы сами вводите слова. Полезно для рукописных заметок, которые AI не распознал.<br>
+                • <strong>Импорт</strong> — загрузка готовых колод из файлов (формат Anki). Удобно, если у вас уже есть список слов.
+            </div>
+        </div>
+        <!-- Вопрос 5 -->
+        <div class="qa-item">
+            <div class="qa-question">
+                <span>К кому обратиться за поддержкой?</span>
+                <button class="qa-toggle" onclick="toggleQA(this)">▼</button>
+            </div>
+            <div class="qa-answer">
+                По всем вопросам поддержки обращайтесь:<br>
+                • Email: <strong>support@linguaocr.local</strong><br>
+            </div>
+        </div>
+    </div>
+</div>
     </main>
 
-    <footer class="footer">
-        <div class="footer-content">
-            <div class="footer-section"><h4>LinguaOCR</h4><p>Превратите свои конспекты в эффективные карточки</p></div>
-            <div class="footer-section"><h4>Продукт</h4><p><a onclick="showTab('upload')">Возможности</a></p><p><a onclick="showTab('import')">Импорт</a></p></div>
-            <div class="footer-section"><h4>Поддержка</h4><p><a onclick="showTab('qa')">FAQ</a></p></div>
-            <div class="footer-section"><h4>Правовая информация</h4><p><a href="#">Политика конфиденциальности</a></p></div>
+   <!-- Футер (исправленный) -->
+<footer class="footer">
+    <div class="footer-content">
+        <div class="footer-section">
+            <h4>LinguaOCR</h4>
+            <p>Превратите свои конспекты в эффективные карточки</p>
         </div>
-        <div class="copyright">© 2026 LinguaOCR. Все права защищены.</div>
-    </footer>
+        <div class="footer-section">
+            <h4>Продукт</h4>
+            <p><a onclick="showTab('upload')">OCR</a></p>
+            <p><a onclick="showTab('manual')">Ручной ввод</a></p>
+            <p><a onclick="showTab('import')">Импорт</a></p>
+        </div>
+        <div class="footer-section">
+            <h4>Поддержка</h4>
+            <p><a onclick="showTab('qa')">FAQ</a></p>
+        </div>
+        <div class="footer-section">
+            <h4>Правовая информация</h4>
+            <p><a href="/privacy">Политика конфиденциальности</a></p>
+            <p><a href="/terms">Условия использования</a></p>
+        </div>
+    </div>
+    <div class="copyright">
+        © 2026 LinguaOCR. Все права защищены.
+    </div>
+</footer>
+
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+<script>
+    // Функция для переключения Q&A
+    function toggleQA(btn) {
+        const item = btn.closest('.qa-item');
+        const answer = item.querySelector('.qa-answer');
+        const isOpen = answer.style.display === 'block';
+        
+        // Закрываем все остальные
+        document.querySelectorAll('.qa-answer').forEach(a => a.style.display = 'none');
+        document.querySelectorAll('.qa-toggle').forEach(b => b.textContent = '▼');
+        
+        if (!isOpen) {
+            answer.style.display = 'block';
+            btn.textContent = '▲';
+        }
+    }
+</script>
 
     <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <script>
+        // Функция для переключения Q&A
+        function toggleQA(btn) {
+            const item = btn.closest('.qa-item');
+            const answer = item.querySelector('.qa-answer');
+            const isOpen = answer.style.display === 'block';
+            
+            // Закрываем все остальные
+            document.querySelectorAll('.qa-answer').forEach(a => a.style.display = 'none');
+            document.querySelectorAll('.qa-toggle').forEach(b => b.textContent = '▼');
+            
+            if (!isOpen) {
+                answer.style.display = 'block';
+                btn.textContent = '▲';
+            }
+        }
+        
+        // Ссылки в футере
+        document.getElementById('privacyLink')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            alert('Политика конфиденциальности: Мы не храним ваши данные. Всё распознавание происходит локально на вашем компьютере через Ollama.');
+        });
+        
+        document.getElementById('termsLink')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            alert('Условия использования: Приложение предоставляется "как есть". Вы можете использовать его для изучения языков бесплатно.');
+        });
+        
+        document.getElementById('supportLink')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            alert('По вопросам поддержки обращайтесь: support@linguaocr.local');
+        });
+    </script>
 </body>
 </html>

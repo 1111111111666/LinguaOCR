@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Политика конфиденциальности - LinguaOCR</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .legal-page {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 60px 32px;
+        }
+        .legal-page h1 {
+            font-size: 36px;
+            font-weight: 700;
+            margin-bottom: 32px;
+            letter-spacing: -0.02em;
+        }
+        .legal-page h2 {
+            font-size: 22px;
+            font-weight: 600;
+            margin: 32px 0 16px;
+        }
+        .legal-page p {
+            color: #555;
+            line-height: 1.6;
+            margin-bottom: 16px;
+        }
+        .legal-page ul {
+            margin: 16px 0 16px 24px;
+            color: #555;
+            line-height: 1.6;
+        }
+        .back-link {
+            display: inline-block;
+            margin-top: 48px;
+            color: #1a1a1a;
+            text-decoration: none;
+            border-bottom: 1px solid #e0e0e0;
+            padding-bottom: 4px;
+        }
+        .back-link:hover {
+            border-bottom-color: #1a1a1a;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="logo">LinguaOCR</div>
+            <div class="nav-links">
+                <a href="/">Вернуться на главную</a>
+            </div>
+        </div>
+    </nav>
+    
+    <main class="legal-page">
+        <h1>Политика конфиденциальности</h1>
+        
+        <p><strong>Дата последнего обновления: 12 июня 2026 г.</strong></p>
+        
+        <h2>1. Общие положения</h2>
+        <p>LinguaOCR (далее — «Приложение») уважает вашу конфиденциальность. Настоящая политика описывает, как мы обрабатываем ваши данные.</p>
+        
+        <h2>2. Какие данные мы собираем</h2>
+        <p>Мы НЕ собираем и НЕ храним ваши личные данные. Всё распознавание происходит локально на вашем компьютере.</p>
+        <ul>
+            <li><strong>Изображения</strong> — обрабатываются только во время распознавания и удаляются после завершения.</li>
+            <li><strong>Колоды слов</strong> — хранятся локально в папке data/ в виде JSON-файлов.</li>
+            <li><strong>Аналитика</strong> — мы не собираем никакой аналитики.</li>
+        </ul>
+        
+        <h2>3. Как мы используем данные</h2>
+        <p>Все данные используются исключительно для работы приложения: распознавание текста, создание карточек и повторение слов.</p>
+        
+        <h2>4. Передача данных третьим лицам</h2>
+        <p>Мы НЕ передаём ваши данные третьим лицам. Распознавание выполняется локально через Ollama на вашем компьютере.</p>
+        
+        <h2>5. Безопасность</h2>
+        <p>Все данные хранятся локально. Вы можете в любой момент удалить свою колоду слов через интерфейс приложения.</p>
+        
+        <h2>6. Ваши права</h2>
+        <p>Вы имеете полный контроль над своими данными. Вы можете просматривать, изменять и удалять любые слова из колоды.</p>
+        
+        <h2>7. Контакты</h2>
+        <p>По вопросам конфиденциальности обращайтесь: <strong>privacy@linguaocr.local</strong></p>
+        
+        <a href="/" class="back-link">← Вернуться на главную</a>
+    </main>
+    
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-section">
+                <h4>LinguaOCR</h4>
+                <p>Превратите свои конспекты в эффективные карточки</p>
+            </div>
+            <div class="footer-section">
+                <h4>Продукт</h4>
+                <p><a href="/">OCR</a></p>
+                <p><a href="/">Ручной ввод</a></p>
+                <p><a href="/">Импорт</a></p>
+            </div>
+            <div class="footer-section">
+                <h4>Поддержка</h4>
+                <p><a href="/#qa">FAQ</a></p>
+            </div>
+            <div class="footer-section">
+                <h4>Правовая информация</h4>
+                <p><a href="/privacy">Политика конфиденциальности</a></p>
+                <p><a href="/terms">Условия использования</a></p>
+            </div>
+        </div>
+        <div class="copyright">
+            © 2026 LinguaOCR. Все права защищены.
+        </div>
+    </footer>
+</body>
+</html>

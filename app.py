@@ -540,7 +540,15 @@ def get_pinyin_route():
     data = request.json
     text = data.get('text', '')
     return jsonify({'pinyin': get_pinyin(text)})
+# Добавьте после остальных маршрутов
 
+@app.route('/privacy')
+def privacy():
+    return render_template('privacy.html')
+
+@app.route('/terms')
+def terms():
+    return render_template('terms.html')
 if __name__ == '__main__':
     print("=" * 60)
     print("🎴 LINGUA OCR")
