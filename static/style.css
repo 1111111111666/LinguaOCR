@@ -50,6 +50,7 @@ body {
     font-weight: 700;
     letter-spacing: -0.02em;
     background: linear-gradient(135deg, #1a1a1a 0%, #404040 100%);
+    background-clip: text;   
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 }
@@ -90,6 +91,7 @@ body {
     letter-spacing: -0.02em;
     margin-bottom: 16px;
     background: linear-gradient(135deg, #1a1a1a 0%, #666666 100%);
+    background-clip: text;   
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 }
@@ -471,6 +473,44 @@ input:checked + .slider:before { transform: translateX(24px); }
 }
 .footer-section a:hover { color: #1a1a1a; }
 .copyright { text-align: center; padding-top: 48px; font-size: 12px; color: #aaa; }
+
+/* ===== ТОЛЬКО ЧТО ДОБАВЛЕННЫЕ КАРТОЧКИ ===== */
+.added-word-card {
+    background: #f5f5f5;
+    border-radius: 8px;
+    padding: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    transition: all 0.2s;
+}
+.added-word-card:hover {
+    background: #ebebeb;
+}
+.added-word-text {
+    font-size: 16px;
+    font-weight: 500;
+    margin-bottom: 4px;
+}
+.added-word-translation {
+    font-size: 12px;
+    color: #888;
+}
+.remove-added-word {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: #ccc;
+    font-size: 16px;
+    padding: 4px 8px;
+    border-radius: 20px;
+    transition: all 0.2s;
+}
+.remove-added-word:hover {
+    color: #ff4444;
+    background: rgba(255, 68, 68, 0.1);
+}
 
 /* ===== АДАПТАЦИЯ ===== */
 @media (max-width: 768px) {

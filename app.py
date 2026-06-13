@@ -5,9 +5,7 @@ import base64
 from pypinyin import pinyin, Style
 import uuid
 from PIL import Image
-import time
 import re
-import traceback
 import requests
 
 # NLP библиотеки
@@ -131,6 +129,17 @@ def get_translation_for_word(word, source_lang='zh-CN', target_lang='ru'):
         translator = GoogleTranslator(source=source_lang, target=target_lang)
         return translator.translate(word)
     except Exception as e:
+        return ''
+
+def get_translation_api(text, source_lang='auto', target_lang='ru'):
+    """API для перевода текста"""
+    if not text:
+        return ''
+    try:
+        translator = GoogleTranslator(source=source_lang, target=target_lang)
+        return translator.translate(text)
+    except Exception as e:
+        print(f"Ошибка перевода: {e}")
         return ''
 
 # ============================================================
@@ -383,6 +392,17 @@ def delete_word(language, word):
 def clear_deck(language):
     save_deck([], language)
     return jsonify({'status': 'cleared'})
+
+@app.route('/api/translate', methods=['POST'])
+def translate():
+    """API для перевода текста (используется в ручном вводе)"""
+    data = request.json
+    text = data.get('text', '')
+    source = data.get('source', 'auto')
+    target = data.get('target', 'ru')
+    
+    translation = get_translation_api(text, source, target)
+    return jsonify({'translation': translation})
 
 @app.route('/api/ocr', methods=['POST'])
 def ocr():

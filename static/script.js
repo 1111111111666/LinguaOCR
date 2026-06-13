@@ -26,7 +26,7 @@ const languageConfig = {
 let currentLanguage = 'chinese';
 let currentDeck = [];
 
-// Данные для каждой вкладки языка
+// Данные для каждой вкладки языка (временные карточки с id)
 let manualAddedWordsByLang = {
     chinese: [],
     english: [],
@@ -62,7 +62,7 @@ let reviewStats = {
 };
 let reviewMode = false; // false: слово→перевод, true: перевод→слово
 
-// Показать уведомление
+// ===== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ =====
 function showToast(message, isError = false) {
     const toast = document.getElementById('toast');
     toast.textContent = message;
@@ -78,8 +78,93 @@ function getLanguageName(lang) {
     const names = { chinese: 'китайского', english: 'английского', russian: 'русского' };
     return names[lang] || lang;
 }
- 
-// Обновление отображения OCR для текущего языка
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m] || m));
+}
+
+// ===== ПРОВЕРКА СООТВЕТСТВИЯ ЯЗЫКА =====
+function validateLanguage(word, language) {
+    if (language === 'chinese') {
+        return /[\u4e00-\u9fff]/.test(word);
+    } else if (language === 'english') {
+        return /^[a-zA-Z\s\-']+$/.test(word.replace(/[^a-zA-Z\s\-']/g, '')) && 
+               !/[\u4e00-\u9fff]/.test(word) && 
+               !/[а-яА-ЯёЁ]/.test(word);
+    } else if (language === 'russian') {
+        return /^[а-яА-ЯёЁ\s\-]+$/.test(word.replace(/[^а-яА-ЯёЁ\s\-]/g, '')) && 
+               !/[\u4e00-\u9fff]/.test(word) && 
+               !/[a-zA-Z]/.test(word);
+    }
+    return true;
+}
+
+// ===== ПОЛУЧЕНИЕ ПЕРЕВОДА =====
+async function getTranslationForWord(word, language) {
+    try {
+        if (language === 'chinese') {
+            const pinyinRes = await fetch('/api/pinyin', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: word })
+            });
+            const pinyinData = await pinyinRes.json();
+            const pinyinText = pinyinData.pinyin || '';
+            
+            const translateRes = await fetch('/api/translate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: word, source: 'zh-CN', target: 'ru' })
+            });
+            const translateData = await translateRes.json();
+            const russianTranslation = translateData.translation || '';
+            
+            if (pinyinText && russianTranslation) {
+                return `${pinyinText} - ${russianTranslation}`;
+            } else if (pinyinText) {
+                return pinyinText;
+            } else if (russianTranslation) {
+                return russianTranslation;
+            }
+            return '';
+        } else if (language === 'english') {
+            const res = await fetch('/api/translate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: word, source: 'en', target: 'ru' })
+            });
+            const data = await res.json();
+            return data.translation || '';
+        } else if (language === 'russian') {
+            const res = await fetch('/api/translate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: word, source: 'ru', target: 'en' })
+            });
+            const data = await res.json();
+            return data.translation || '';
+        }
+    } catch (e) {
+        console.error('Ошибка перевода:', e);
+        return '';
+    }
+    return '';
+}
+
+// ===== ОБНОВЛЕНИЕ UI =====
+function updateLanguageUI() {
+    const config = languageConfig[currentLanguage];
+    const manualInput = document.getElementById('manualWord');
+    if (manualInput) manualInput.placeholder = config.placeholder;
+    const resultsTitle = document.getElementById('resultsTitle');
+    if (resultsTitle) resultsTitle.textContent = config.wordsLabel;
+    
+    updateTempAddedDisplay();
+    updateOCRDisplayForCurrentLanguage();
+    updateImportPlaceholder();
+}
+
 async function updateOCRDisplayForCurrentLanguage() {
     const resultsSection = document.getElementById('resultsSection');
     const wordsGrid = document.getElementById('wordsGrid');
@@ -109,46 +194,83 @@ async function updateOCRDisplayForCurrentLanguage() {
     }
 }
 
-// Переключение языка
-document.querySelectorAll('.lang-btn').forEach(btn => {
-    btn.addEventListener('click', async () => {
-        document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        currentLanguage = btn.dataset.lang;
-        updateLanguageUI();
-        await loadDeck();
-        if (isReviewActive) {
-            isReviewActive = false;
-            document.getElementById('reviewCard').style.display = 'none';
-            document.getElementById('reviewContainer').style.display = 'flex';
-        }
-    });
-});
-
-// Переключение вкладок
-function showTab(tabId) {
-    document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-    document.getElementById(`${tabId}-tab`).classList.add('active');
+function updateTempAddedDisplay() {
+    const section = document.getElementById('addedWordsSection');
+    const grid = document.getElementById('addedWordsGrid');
+    const words = manualAddedWordsByLang[currentLanguage];
     
-    if (tabId !== 'review' && isReviewActive) {
-        isReviewActive = false;
-        document.getElementById('reviewCard').style.display = 'none';
-        document.getElementById('reviewContainer').style.display = 'flex';
+    if (words.length === 0) {
+        section.style.display = 'none';
+        return;
     }
-    
-    if (tabId === 'deck') loadDeck();
-    if (tabId === 'manual') updateTempAddedDisplay();
-    if (tabId === 'upload') updateOCRDisplayForCurrentLanguage();
+    section.style.display = 'block';
+    grid.innerHTML = words.slice(0, 10).map(item => `
+        <div class="added-word-card" data-id="${item.id}">
+            <div style="flex: 1;">
+                <div class="added-word-text">${escapeHtml(item.word)}</div>
+                <div class="added-word-translation" style="font-size: 12px; color: #888;">${escapeHtml(item.translation)}</div>
+            </div>
+            <button class="remove-added-word" onclick="removeManualWord(${item.id})">✖</button>
+        </div>
+    `).join('');
 }
 
-// Загрузка колоды для текущего языка
+async function removeManualWord(id) {
+    const words = manualAddedWordsByLang[currentLanguage];
+    const index = words.findIndex(item => item.id === id);
+    
+    if (index !== -1) {
+        const wordToRemove = words[index].word;
+        
+        // Удаляем из временного хранилища
+        words.splice(index, 1);
+        updateTempAddedDisplay();
+        
+        // Удаляем из колоды на сервере
+        try {
+            const response = await fetch(`/api/deck/${currentLanguage}/${encodeURIComponent(wordToRemove)}`, { 
+                method: 'DELETE' 
+            });
+            
+            if (response.ok) {
+                showToast(`🗑️ "${wordToRemove}" удалён из колоды`);
+                // Перезагружаем колоду, чтобы обновить интерфейс
+                await loadDeck();
+                
+                // Обновляем отображение OCR результатов, если есть
+                if (ocrResultsByLang[currentLanguage]) {
+                    await displayResults(ocrResultsByLang[currentLanguage].words);
+                }
+            } else {
+                showToast(`❌ Не удалось удалить "${wordToRemove}"`, true);
+            }
+        } catch (e) {
+            console.error('Ошибка удаления:', e);
+            showToast(`❌ Ошибка при удалении`, true);
+        }
+    }
+}
+
+function updateImportPlaceholder() {
+    const textarea = document.getElementById('importText');
+    if (!textarea) return;
+    
+    if (currentLanguage === 'chinese') {
+        textarea.placeholder = '你;ni3 - перевод\n好;hao3 - перевод\n谢谢;xie4xie - перевод';
+    } else if (currentLanguage === 'english') {
+        textarea.placeholder = 'hello;привет\nworld;мир\nlanguage;язык';
+    } else if (currentLanguage === 'russian') {
+        textarea.placeholder = 'привет;hello\nмир;world\nязык;language';
+    }
+}
+
+// ===== РАБОТА С КОЛОДОЙ =====
 async function loadDeck() {
     try {
         const response = await fetch(`/api/deck/${currentLanguage}`);
         currentDeck = await response.json();
         updateDeckUI();
-    } catch (e) {
-    }
+    } catch (e) {}
 }
 
 function updateDeckUI() {
@@ -187,7 +309,67 @@ async function clearDeck() {
     }
 }
 
-// Показываем превью и сохраняем для текущего языка
+async function addToDeck(word, translation) {
+    try {
+        const response = await fetch(`/api/deck/${currentLanguage}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ word, translation })
+        });
+        const data = await response.json();
+        return data.status === 'added';
+    } catch (e) {
+        return false;
+    }
+}
+
+// ===== РУЧНОЙ ВВОД (С ПРОВЕРКОЙ, ПЕРЕВОДОМ И КРЕСТИКОМ) =====
+async function addManualWord() {
+    const input = document.getElementById('manualWord');
+    const word = input.value.trim();
+    if (!word) return;
+    
+    // Проверка на правильный язык
+    if (!validateLanguage(word, currentLanguage)) {
+        let errorMsg = '';
+        if (currentLanguage === 'chinese') {
+            errorMsg = 'Пожалуйста, введите китайские иероглифы';
+        } else if (currentLanguage === 'english') {
+            errorMsg = 'Пожалуйста, введите английские слова';
+        } else if (currentLanguage === 'russian') {
+            errorMsg = 'Пожалуйста, введите русские слова';
+        }
+        showToast(`⚠️ ${errorMsg}`, true);
+        input.value = '';
+        return;
+    }
+    
+    // Получаем перевод
+    let translation = await getTranslationForWord(word, currentLanguage);
+    
+    // Добавляем в колоду
+    const added = await addToDeck(word, translation);
+    if (added) {
+        const newCard = {
+            id: Date.now() + Math.random(),
+            word: word,
+            translation: translation
+        };
+        manualAddedWordsByLang[currentLanguage].unshift(newCard);
+        updateTempAddedDisplay();
+        input.value = '';
+        showToast(`✅ "${word}" добавлен в колоду`);
+        await loadDeck();
+        
+        if (ocrResultsByLang[currentLanguage]) {
+            await displayResults(ocrResultsByLang[currentLanguage].words);
+        }
+    } else {
+        showToast(`⚠️ "${word}" уже есть в колоде`);
+    }
+}
+
+// ===== OCR РАСПОЗНАВАНИЕ =====
 function showPreviewForLanguage(imageBase64, language) {
     previewsByLang[language] = imageBase64;
     
@@ -222,76 +404,6 @@ function clearPreviewForLanguage(language) {
 
 function clearPreview() {
     clearPreviewForLanguage(currentLanguage);
-}
-
-// Глобальный обработчик Ctrl+V
-document.addEventListener('paste', async (e) => {
-    const activeTab = document.querySelector('.tab-content.active')?.id;
-    if (activeTab !== 'upload-tab') return;
-    
-    const items = e.clipboardData.items;
-    for (const item of items) {
-        if (item.type.startsWith('image/')) {
-            e.preventDefault();
-            const blob = item.getAsFile();
-            if (blob) {
-                const file = new File([blob], 'pasted-image.png', { type: blob.type });
-                await processImage(file);
-            }
-            return;
-        }
-    }
-});
-
-// Drag & Drop и загрузка
-const dropZone = document.getElementById('dropZone');
-const fileInput = document.getElementById('fileInput');
-
-if (dropZone) {
-    dropZone.addEventListener('click', (e) => {
-        if (!e.target.closest('.remove-preview-btn')) {
-            fileInput.click();
-        }
-    });
-    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
-    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
-    dropZone.addEventListener('drop', async (e) => {
-        e.preventDefault();
-        dropZone.classList.remove('drag-over');
-        const file = e.dataTransfer.files[0];
-        if (file && file.type.startsWith('image/')) await processImage(file);
-    });
-}
-if (fileInput) {
-    fileInput.addEventListener('change', async (e) => { if (e.target.files[0]) await processImage(e.target.files[0]); });
-}
-
-// Кнопка буфера обмена
-const clipboardBtn = document.getElementById('clipboardBtn');
-if (clipboardBtn) {
-    clipboardBtn.addEventListener('click', async (e) => {
-        e.stopPropagation();
-        e.preventDefault();
-        try {
-            const clipboardItems = await navigator.clipboard.read();
-            let imageFound = false;
-            for (const item of clipboardItems) {
-                const imageTypes = item.types.filter(type => type.startsWith('image/'));
-                if (imageTypes.length > 0) {
-                    const blob = await item.getType(imageTypes[0]);
-                    const file = new File([blob], 'clipboard.png', { type: blob.type });
-                    await processImage(file);
-                    imageFound = true;
-                    return;
-                }
-            }
-            if (!imageFound) {
-                showToast('В буфере обмена нет изображения');
-            }
-        } catch (err) {
-            showToast('Не удалось получить изображение из буфера обмена');
-        }
-    });
 }
 
 async function processImage(file) {
@@ -374,20 +486,6 @@ async function displayResults(words) {
     }
 }
 
-async function addToDeck(word, translation) {
-    try {
-        const response = await fetch(`/api/deck/${currentLanguage}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ word, translation })
-        });
-        const data = await response.json();
-        return data.status === 'added';
-    } catch (e) {
-        return false;
-    }
-}
-
 async function addToDeckAndRefresh(btn, word, translation) {
     const added = await addToDeck(word, translation);
     if (added) {
@@ -414,61 +512,7 @@ async function addToDeckAndRefresh(btn, word, translation) {
     }
 }
 
-// Ручной ввод с переводом
-async function addManualWord() {
-    const input = document.getElementById('manualWord');
-    const word = input.value.trim();
-    if (!word) return;
-    
-    let translation = '';
-    if (currentLanguage === 'chinese') {
-        try {
-            const response = await fetch('/api/pinyin', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text: word })
-            });
-            const data = await response.json();
-            translation = data.pinyin;
-        } catch (e) {
-        }
-    }
-    
-    const added = await addToDeck(word, translation);
-    if (added) {
-        manualAddedWordsByLang[currentLanguage].unshift({ word, translation });
-        updateTempAddedDisplay();
-        input.value = '';
-        showToast(`✅ "${word}" добавлен в колоду`);
-        await loadDeck();
-        
-        if (ocrResultsByLang[currentLanguage]) {
-            await displayResults(ocrResultsByLang[currentLanguage].words);
-        }
-    } else {
-        showToast(`⚠️ "${word}" уже есть в колоде`);
-    }
-}
-
-function updateTempAddedDisplay() {
-    const section = document.getElementById('addedWordsSection');
-    const grid = document.getElementById('addedWordsGrid');
-    const words = manualAddedWordsByLang[currentLanguage];
-    
-    if (words.length === 0) {
-        section.style.display = 'none';
-        return;
-    }
-    section.style.display = 'block';
-    grid.innerHTML = words.slice(0, 10).map(item => `
-        <div class="added-word-card">
-            <span class="added-word-text">${escapeHtml(item.word)}</span>
-            <span style="font-size: 12px; color: #888;">${escapeHtml(item.translation)}</span>
-        </div>
-    `).join('');
-}
-
-// Переключение режима повторения
+// ===== ПОВТОРЕНИЕ =====
 function toggleReviewMode() {
     reviewMode = document.getElementById('modeToggle').checked;
     if (isReviewActive) {
@@ -476,7 +520,6 @@ function toggleReviewMode() {
     }
 }
 
-// Обновление статистики повторения
 function updateReviewStats() {
     const remaining = reviewCards.length - currentCardIndex;
     const statsElement = document.getElementById('reviewStats');
@@ -491,7 +534,6 @@ function updateReviewStats() {
     }
 }
 
-// Начать повторение
 function startReview() {
     if (currentDeck.length === 0) {
         document.getElementById('noCardsMsg').style.display = 'block';
@@ -522,12 +564,10 @@ function startReview() {
     showCurrentCard();
 }
 
-// Показать текущую карточку (с учётом режима)
 function showCurrentCard() {
     if (!isReviewActive) return;
     
     if (currentCardIndex >= reviewCards.length) {
-        // Правильный расчёт точности
         const totalAnswered = reviewStats.correct + reviewStats.incorrect;
         const accuracy = totalAnswered > 0 ? Math.round((reviewStats.correct / totalAnswered) * 100) : 0;
         showToast(`🎉 Поздравляю! Вы повторили все слова! Точность: ${accuracy}%`);
@@ -553,7 +593,6 @@ function showCurrentCard() {
     updateReviewStats();
 }
 
-// Переворот карточки
 function flipCard() {
     const translation = document.getElementById('reviewTranslation');
     if (translation.style.display === 'none') {
@@ -563,7 +602,6 @@ function flipCard() {
     }
 }
 
-// Следующая карточка
 function nextCard(result) {
     if (!isReviewActive) return;
     
@@ -579,13 +617,19 @@ function nextCard(result) {
     showCurrentCard();
 }
 
-// Импорт Anki (полностью переписан)
+function bindReviewEvents() {
+    const reviewWord = document.getElementById('reviewWord');
+    const reviewTranslation = document.getElementById('reviewTranslation');
+    if (reviewWord) reviewWord.addEventListener('click', flipCard);
+    if (reviewTranslation) reviewTranslation.addEventListener('click', flipCard);
+}
+
+// ===== ИМПОРТ ANKI =====
 async function importAnki() {
     const textarea = document.getElementById('importText');
     const text = textarea.value;
     const lines = text.split('\n');
     
-    // Проверяем язык импортируемых слов
     const targetLanguage = currentLanguage;
     let imported = 0;
     let skipped = 0;
@@ -607,23 +651,19 @@ async function importAnki() {
         
         if (!word) continue;
         
-        // Проверка на соответствие языка
         let isValid = true;
         
         if (targetLanguage === 'chinese') {
-            // Должны быть китайские иероглифы
             if (!/[\u4e00-\u9fff]/.test(word)) {
                 isValid = false;
                 warning = 'Импортируйте только китайские иероглифы.';
             }
         } else if (targetLanguage === 'english') {
-            // Должны быть английские буквы
             if (!/^[a-zA-Z\s\-']+$/.test(word.replace(/[^a-zA-Z\s\-']/g, ''))) {
                 isValid = false;
                 warning = 'Импортируйте только английские слова.';
             }
         } else if (targetLanguage === 'russian') {
-            // Должны быть русские буквы
             if (!/^[а-яА-ЯёЁ\s\-]+$/.test(word.replace(/[^а-яА-ЯёЁ\s\-]/g, ''))) {
                 isValid = false;
                 warning = 'Импортируйте только русские слова.';
@@ -639,10 +679,8 @@ async function importAnki() {
         if (added) imported++;
     }
     
-    // Очищаем текстовое поле
     textarea.value = '';
     
-    // Показываем результат
     if (warning && skipped > 0) {
         showToast(`⚠️ ${warning} Импортировано ${imported} слов, пропущено ${skipped}.`, true);
     } else if (imported > 0) {
@@ -657,21 +695,23 @@ async function importAnki() {
         await displayResults(ocrResultsByLang[currentLanguage].words);
     }
 }
-// Функция для обновления плейсхолдера импорта при смене языка
-function updateImportPlaceholder() {
-    const textarea = document.getElementById('importText');
-    if (!textarea) return;
-    
-    if (currentLanguage === 'chinese') {
-        textarea.placeholder = '你;ni3 - перевод\n好;hao3 - перевод\n谢谢;xie4xie - перевод';
-    } else if (currentLanguage === 'english') {
-        textarea.placeholder = 'hello;привет\nworld;мир\nlanguage;язык';
-    } else if (currentLanguage === 'russian') {
-        textarea.placeholder = 'привет;hello\nмир;world\nязык;language';
-    }
-}
 
-// Добавляем очистку поля при переключении на вкладку импорта
+// ===== ПЕРЕКЛЮЧЕНИЕ ЯЗЫКОВ И ВКЛАДОК =====
+document.querySelectorAll('.lang-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+        document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentLanguage = btn.dataset.lang;
+        updateLanguageUI();
+        await loadDeck();
+        if (isReviewActive) {
+            isReviewActive = false;
+            document.getElementById('reviewCard').style.display = 'none';
+            document.getElementById('reviewContainer').style.display = 'flex';
+        }
+    });
+});
+
 function showTab(tabId) {
     document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
     document.getElementById(`${tabId}-tab`).classList.add('active');
@@ -686,39 +726,80 @@ function showTab(tabId) {
     if (tabId === 'manual') updateTempAddedDisplay();
     if (tabId === 'upload') updateOCRDisplayForCurrentLanguage();
     if (tabId === 'import') {
-        // Очищаем поле при открытии вкладки импорта
         const textarea = document.getElementById('importText');
         if (textarea) textarea.value = '';
     }
 }
 
-// Обновляем updateLanguageUI, чтобы менять плейсхолдер импорта
-function updateLanguageUI() {
-    const config = languageConfig[currentLanguage];
-    const manualInput = document.getElementById('manualWord');
-    if (manualInput) manualInput.placeholder = config.placeholder;
-    const resultsTitle = document.getElementById('resultsTitle');
-    if (resultsTitle) resultsTitle.textContent = config.wordsLabel;
+// ===== ГЛОБАЛЬНЫЕ ОБРАБОТЧИКИ =====
+document.addEventListener('paste', async (e) => {
+    const activeTab = document.querySelector('.tab-content.active')?.id;
+    if (activeTab !== 'upload-tab') return;
     
-    updateTempAddedDisplay();
-    updateOCRDisplayForCurrentLanguage();
-    updateImportPlaceholder(); // Добавляем обновление плейсхолдера импорта
+    const items = e.clipboardData.items;
+    for (const item of items) {
+        if (item.type.startsWith('image/')) {
+            e.preventDefault();
+            const blob = item.getAsFile();
+            if (blob) {
+                const file = new File([blob], 'pasted-image.png', { type: blob.type });
+                await processImage(file);
+            }
+            return;
+        }
+    }
+});
+
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+
+if (dropZone) {
+    dropZone.addEventListener('click', (e) => {
+        if (!e.target.closest('.remove-preview-btn')) {
+            fileInput.click();
+        }
+    });
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+    dropZone.addEventListener('drop', async (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('drag-over');
+        const file = e.dataTransfer.files[0];
+        if (file && file.type.startsWith('image/')) await processImage(file);
+    });
+}
+if (fileInput) {
+    fileInput.addEventListener('change', async (e) => { if (e.target.files[0]) await processImage(e.target.files[0]); });
 }
 
-function escapeHtml(str) {
-    if (!str) return '';
-    return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m] || m));
+const clipboardBtn = document.getElementById('clipboardBtn');
+if (clipboardBtn) {
+    clipboardBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        try {
+            const clipboardItems = await navigator.clipboard.read();
+            let imageFound = false;
+            for (const item of clipboardItems) {
+                const imageTypes = item.types.filter(type => type.startsWith('image/'));
+                if (imageTypes.length > 0) {
+                    const blob = await item.getType(imageTypes[0]);
+                    const file = new File([blob], 'clipboard.png', { type: blob.type });
+                    await processImage(file);
+                    imageFound = true;
+                    return;
+                }
+            }
+            if (!imageFound) {
+                showToast('В буфере обмена нет изображения');
+            }
+        } catch (err) {
+            showToast('Не удалось получить изображение из буфера обмена');
+        }
+    });
 }
 
-// Привязываем клик по карточке к перевороту
-function bindReviewEvents() {
-    const reviewWord = document.getElementById('reviewWord');
-    const reviewTranslation = document.getElementById('reviewTranslation');
-    if (reviewWord) reviewWord.addEventListener('click', flipCard);
-    if (reviewTranslation) reviewTranslation.addEventListener('click', flipCard);
-}
-
-// Инициализация
+// ===== ИНИЦИАЛИЗАЦИЯ =====
 updateImportPlaceholder();
 updateLanguageUI();
 loadDeck();
